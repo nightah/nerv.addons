@@ -1,0 +1,46 @@
+msgid ""
+msgstr ""
+
+msgctxt "#30000"
+msgid "Live Channels"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Featured"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Sports"
+msgstr ""
+
+msgctxt "#30003"
+msgid "Shows"
+msgstr ""
+
+msgctxt "#30004"
+msgid "Kayo sign in failed: {result}"
+msgstr ""
+
+msgctxt "#30005"
+msgid "Your Kayo session expired and could not be refreshed. Please sign in again.\n{error}"
+msgstr ""
+
+msgctxt "#30006"
+msgid "Kayo could not start playback: {error}"
+msgstr ""
+
+msgctxt "#30007"
+msgid "No data returned from Kayo"
+msgstr ""
+
+msgctxt "#30009"
+msgid "This event has not started yet. It starts {start}."
+msgstr ""
+
+msgctxt "#30010"
+msgid "LIVE"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Your Kayo subscription is not active ({status})"
+msgstr ""

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.video.kayo" name="Kayo Sports" provider-name="nightah" version="1.0.0">
+  <requires>
+    <import addon="xbmc.python" version="3.0.1"/>
+    <import addon="script.module.slyguy" version="0.86.0"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
+    <provides>video</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <description lang="en">Watch live channels, live events, replays and shows from your Kayo Sports subscription.
+
+Subscription required. Requires script.module.slyguy (installed automatically from the NERV Repository) and Kodi 20 or newer.</description>
+    <reuselanguageinvoker>true</reuselanguageinvoker>
+    <platform>all</platform>
+    <license>GPL-3.0-or-later</license>
+    <news>Initial release for the DAZN-based Kayo platform</news>
+    <assets>
+      <icon>icon.png</icon>
+    </assets>
+  </extension>
+</addon>

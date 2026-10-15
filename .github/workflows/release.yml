@@ -1,0 +1,53 @@
+---
+name: Release
+
+on:
+  push:
+    tags: ['*-v*']
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create the GitHub release and upload its zip
+      pages: write  # deploy dist/ to GitHub Pages
+      id-token: write  # verify the Pages deployment's origin
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build repository
+        run: ./build.sh
+      - name: Create release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ID=${GITHUB_REF_NAME%-v*}
+          VERSION=${GITHUB_REF_NAME##*-v}
+          ZIP=dist/repository.nerv/$ID/$ID-$VERSION.zip
+          if [ ! -f "$ZIP" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match an addon id and the version in its addon.xml" >&2
+            exit 1
+          fi
+          PREVIOUS=$(git tag -l "$ID-v*" --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n1)
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "$ID - v$VERSION" \
+            --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1
+...

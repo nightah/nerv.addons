@@ -1,0 +1,18 @@
+[files]
+# The GPL text is reproduced verbatim, in US spelling.
+extend-exclude = ["LICENSE", "LICENSE.txt"]
+
+[default]
+locale = "en-au"
+# HTML attribute values are US spelling.
+extend-ignore-re = ['align="center"']
+
+[default.extend-words]
+# Australian spelling of the noun; typos can't tell it from the verb "license".
+licence = "licence"
+
+[default.extend-identifiers]
+# Names fixed by external APIs: the DASH manifest attribute, Arrow's method, and the HTTP header.
+initialization = "initialization"
+humanize = "humanize"
+Authorization = "Authorization"
