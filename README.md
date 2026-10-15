@@ -9,6 +9,8 @@
   <a href="https://docs.astral.sh/ruff/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fcode%2520style-ruff-blue.json&query=%24.message&label=code%20style&logo=ruff&logoColor=%23d7ff64&mode=dark&size=sm&variant=outline"><img alt="Ruff" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fcode%2520style-ruff-blue.json&query=%24.message&label=code%20style&logo=ruff&logoColor=%23d7ff64&mode=light&size=sm&variant=outline"></picture></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/nightah/nerv.addons/license.svg?label=licence&logo=gnu&logoColor=%23a42e2b&mode=dark&size=sm&variant=outline"><img alt="Licence" src="https://shieldcn.dev/github/nightah/nerv.addons/license.svg?label=licence&logo=gnu&logoColor=%23a42e2b&mode=light&size=sm&variant=outline"></picture></a>
   <a href="https://www.conventionalcommits.org/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fcommits-conventional-blue.json&query=%24.message&label=commits&logo=conventionalcommits&logoColor=%23fe5196&mode=dark&size=sm&variant=outline"><img alt="Conventional Commits" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fcommits-conventional-blue.json&query=%24.message&label=commits&logo=conventionalcommits&logoColor=%23fe5196&mode=light&size=sm&variant=outline"></picture></a>
+  <a href="https://github.com/sponsors/nightah"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fsponsor-nightah-blue.json&query=%24.message&label=sponsor&logo=githubsponsors&logoColor=%23ea4aaa&mode=dark&size=sm&variant=outline"><img alt="GitHub Sponsors" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fsponsor-nightah-blue.json&query=%24.message&label=sponsor&logo=githubsponsors&logoColor=%23ea4aaa&mode=light&size=sm&variant=outline"></picture></a>
+  <a href="https://ko-fi.com/nightah"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fko--fi-nightah-blue.json&query=%24.message&label=ko-fi&logo=kofi&logoColor=%23ff5e5b&mode=dark&size=sm&variant=outline"><img alt="Ko-fi" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fimg.shields.io%2Fbadge%2Fko--fi-nightah-blue.json&query=%24.message&label=ko-fi&logo=kofi&logoColor=%23ff5e5b&mode=light&size=sm&variant=outline"></picture></a>
 </p>
 
 # nerv.addons
@@ -87,6 +89,10 @@ The [release workflow](.github/workflows/release.yml) then:
 1. Builds `dist/` and checks the tag matches the addon's version.
 2. Creates a GitHub release for that addon, with notes since its previous tag and its zip attached.
 3. Deploys `dist/` to GitHub Pages at <https://kodi.nerv.cx/>.
+
+## Support
+
+If these addons are useful to you, you can support their development through [GitHub Sponsors](https://github.com/sponsors/nightah) or [Ko-fi](https://ko-fi.com/nightah).
 
 ## Acknowledgements
 
