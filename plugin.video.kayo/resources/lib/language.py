@@ -1,0 +1,18 @@
+from slyguy.language import BaseLanguage
+
+
+class Language(BaseLanguage):
+    LIVE_CHANNELS = 30000
+    FEATURED = 30001
+    SPORTS = 30002
+    SHOWS = 30003
+    LOGIN_FAILED = 30004
+    REFRESH_FAILED = 30005
+    PLAYBACK_ERROR = 30006
+    NO_DATA = 30007
+    NOT_STARTED = 30009
+    LIVE = 30010
+    SUBSCRIPTION_INACTIVE = 30011
+
+
+_ = Language()

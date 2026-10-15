@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+dist/
+
+*.pyc
+.DS_Store
+
+plugin.video.kayo/tests/.userdata.json

@@ -1,0 +1,130 @@
+---
+pre-commit:
+  piped: true
+  jobs:
+    - name: check tools
+      run: |
+        MISSING=""
+        COUNT=0
+
+        for TOOL in editorconfig-checker jq kodi-addon-checker ruff shellcheck typos yamllint zizmor; do
+          if ! command -v ${TOOL} >/dev/null 2>&1; then
+            if [ "${COUNT}" -eq 0 ]; then
+              MISSING=${TOOL}
+            elif [ "${COUNT}" -eq 1 ]; then
+              MISSING="${MISSING} and ${TOOL}"
+            else
+              MISSING="$(echo "${MISSING}" | sed 's/ and /, /') and ${TOOL}"
+            fi
+            COUNT=$((COUNT + 1))
+          fi
+        done
+
+        if [ ${COUNT} -gt 0 ]; then
+          echo "❌ You must install ${MISSING}"
+          exit 1
+        fi
+
+    - name: linters
+      group:
+        parallel: true
+        jobs:
+          - name: editorconfig-checker
+            run: editorconfig-checker {staged_files} && echo "0 issues."
+            file_types:
+              - text
+
+          - name: jq
+            run: jq -e . {staged_files} >/dev/null && echo "0 issues."
+            glob: "*.json"
+
+          - name: kodi-addon-checker
+            # Checks each addon (a top-level folder with an addon.xml) that has staged changes.
+            # Dependencies come from the SlyGuy feed, not the official Kodi repository, so those checks are skipped.
+            run: |
+              ADDONS=""
+              for DIR in $(printf '%s\n' {staged_files} | cut -d/ -f1 | sort -u); do
+                if [ -f "${DIR}/addon.xml" ]; then
+                  ADDONS="${ADDONS} ${DIR}"
+                fi
+              done
+
+              if [ -z "${ADDONS}" ]; then
+                echo "0 issues."
+                exit 0
+              fi
+
+              # shellcheck disable=SC2086
+              kodi-addon-checker --branch nexus --skip-dependency-checks ${ADDONS}
+
+          - name: ruff check
+            run: ruff check --fix {staged_files} && echo "0 issues."
+            glob: "*.py"
+            stage_fixed: true
+
+          - name: ruff format
+            run: ruff format {staged_files}
+            glob: "*.py"
+            stage_fixed: true
+
+          - name: shellcheck
+            run: shellcheck --format=gcc {staged_files} && echo "0 issues."
+            file_types:
+              - text/x-shellscript
+              - text/x-sh
+
+          - name: typos
+            run: typos -w --force-exclude --threads 4 --format brief {staged_files} && echo "0 issues."
+            # Binary files passed explicitly are still scanned and rewritten, so limit typos to text.
+            file_types:
+              - text
+            stage_fixed: true
+
+          - name: yamllint
+            run: yamllint -f parsable . && echo "0 issues."
+            glob: "*.{yml,yaml}"
+
+          - name: zizmor
+            run: zizmor --offline {staged_files}
+            glob: ".github/workflows/*.{yml,yaml}"
+
+commit-msg:
+  jobs:
+    - name: conventional-commits
+      run: |
+        SUBJECT=$(head -n1 "{1}")
+
+        # Skip merge commits and fixup/squash autocommits.
+        case "${SUBJECT}" in
+          Merge*|"fixup!"*|"squash!"*) exit 0 ;;
+        esac
+
+        if [ ${#SUBJECT} -gt 72 ]; then
+          echo "❌ Commit subject is ${#SUBJECT} chars, max is 72:"
+          echo "   ${SUBJECT}"
+          exit 1
+        fi
+
+        LOWER=$(printf '%s' "${SUBJECT}" | tr '[:upper:]' '[:lower:]')
+        if [ "${SUBJECT}" != "${LOWER}" ]; then
+          echo "❌ Commit subject must be all lowercase:"
+          echo "   ${SUBJECT}"
+          exit 1
+        fi
+
+        TYPES='build|ci|docs|feat|fix|perf|refactor|release|revert|test'
+        SCOPES='deps|github|kayo|lefthook|repository'
+
+        if printf '%s' "${SUBJECT}" | grep -qE "^(${TYPES})(\((${SCOPES})\))?!?: .+"; then
+          exit 0
+        fi
+
+        echo "❌ Commit subject must follow Conventional Commits:"
+        echo "   <type>[(<scope>)][!]: <description>"
+        echo ""
+        echo "   Types:  ${TYPES}"
+        echo "   Scopes: ${SCOPES}"
+        echo ""
+        echo "   Got: ${SUBJECT}"
+        exit 1
+...

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="repository.nerv" name="NERV Repository" provider-name="nightah" version="1.0.0">
+  <extension point="xbmc.addon.repository" name="NERV Repository">
+    <dir>
+      <info compressed="false">https://kodi.nerv.cx/repository.nerv/addons.xml</info>
+      <checksum>https://kodi.nerv.cx/repository.nerv/addons.xml.md5</checksum>
+      <datadir zip="true">https://kodi.nerv.cx/repository.nerv/</datadir>
+    </dir>
+    <dir>
+      <info compressed="false">https://slyguy.uk/.repo/repository.slyguy/addons.xml</info>
+      <checksum>https://slyguy.uk/.repo/repository.slyguy/addons.xml.md5</checksum>
+      <datadir zip="true">https://slyguy.uk/.repo/repository.slyguy/</datadir>
+    </dir>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <description lang="en">Kodi addons by nightah, including Kayo Sports. Also includes the SlyGuy repository feed so dependencies such as script.module.slyguy install automatically.</description>
+    <platform>all</platform>
+    <license>GPL-3.0-or-later</license>
+    <assets>
+      <icon>icon.png</icon>
+      <fanart>fanart.jpg</fanart>
+    </assets>
+  </extension>
+</addon>
