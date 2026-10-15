@@ -54,7 +54,7 @@ lefthook install
 | Hook | Checks |
 | --- | --- |
 | pre-commit | editorconfig-checker, jq, kodi-addon-checker, Ruff lint and format (`.ruff.toml`), ShellCheck, typos in en-AU (`.typos.toml`), yamllint, zizmor on GitHub workflows |
-| commit-msg | Lowercase [Conventional Commits](https://www.conventionalcommits.org/) subject, at most 72 characters, with an optional scope of `deps`, `github`, `kayo`, `lefthook`, or `repository` |
+| commit-msg | Lowercase [Conventional Commits](https://www.conventionalcommits.org/) subject, at most 72 characters, with an optional scope of `deps`, `github`, `kayo`, `lefthook`, `renovate`, or `repository` |
 
 ## Build
 

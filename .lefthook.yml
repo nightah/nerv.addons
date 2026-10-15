@@ -113,7 +113,7 @@ commit-msg:
         fi
 
         TYPES='build|ci|docs|feat|fix|perf|refactor|release|revert|test'
-        SCOPES='deps|github|kayo|lefthook|repository'
+        SCOPES='deps|github|kayo|lefthook|renovate|repository'
 
         if printf '%s' "${SUBJECT}" | grep -qE "^(${TYPES})(\((${SCOPES})\))?!?: .+"; then
           exit 0
