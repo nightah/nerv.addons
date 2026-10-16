@@ -26,6 +26,9 @@ from .settings import settings
 
 api = API()
 
+# Resume a few seconds before the last position, so the playback startup buffer plays back up to where it stopped
+RESUME_BUFFER = 3
+
 
 # SlyGuy gives items it builds itself (settings, search history) its default thumb, which is the addon icon
 DEFAULT_THUMBS = {ROUTE_SETTINGS: "settings", "search": "search"}
@@ -361,16 +364,31 @@ def play(asset_id, start=None, **kwargs):
         gui.ok(_(_.NOT_STARTED, start=arrow.get(start).to("local").humanize()))
         return
 
-    # Live events keep the whole event in the DVR window, so they can be joined live or watched from the start
+    # Live events keep the whole event in the DVR window, so they can be joined live, watched from the start, or
+    # resumed from where they were last stopped
     offset = int((arrow.utcnow() - arrow.get(start)).total_seconds()) if start and kwargs.get(ROUTE_LIVE_TAG) else 0
     play_type = PLAY_FROM_LIVE
+    resume_target = None
     if offset > 0:
+        # lock_callback stores the absolute stream position (getTime) this event was last watched at, so resume
+        # seeks straight to it; the position is frozen at the stop point, so it never drifts while stopped
+        saved = userdata.get("resume") or {}
+        resume_pos = int(saved["pos"]) if saved.get("asset") == asset_id and saved.get("pos") is not None else None
+
         play_type = settings.LIVE_PLAY_TYPE.value
         if play_type == PLAY_FROM_ASK:
-            index = gui.context_menu([_.JOIN_LIVE, _.FROM_START])
+            options = [_.JOIN_LIVE, _.FROM_START]
+            can_resume = resume_pos is not None and 0 < resume_pos < offset
+            if can_resume:
+                options.append(_.RESUME)
+
+            index = gui.context_menu(options)
             if index == -1:
                 return
+
             play_type = PLAY_FROM_START if index == 1 else PLAY_FROM_LIVE
+            if can_resume and index == 2:
+                resume_target = max(resume_pos - RESUME_BUFFER, 0)
 
     data = api.play(asset_id)
     details = data["PlaybackDetails"][0]
@@ -389,6 +407,10 @@ def play(asset_id, start=None, **kwargs):
 
     lock_interval = int((data.get("PlaybackLock") or {}).get("UpdateLockIntervalSeconds") or 0)
 
+    # resume_asset lets lock_callback store the position only for resumable live events, not linear channels
+    callback_url = plugin.url_for(lock_callback, resume_asset=asset_id) if offset > 0 else plugin.url_for(lock_callback)
+    interval = max(lock_interval - 15, 30)
+
     item = plugin.Item(
         path=manifest_url,
         headers={"User-Agent": USER_AGENT},
@@ -397,18 +419,20 @@ def play(asset_id, start=None, **kwargs):
             license_headers={"User-Agent": USER_AGENT, "X-BRAND": BRAND, "X-DAZNID": userdata.get("dazn_id", "")},
             properties=properties,
         ),
-        callback={
-            "type": "interval_ts",
-            "interval": max(lock_interval - 15, 30),
-            "callback": plugin.url_for(lock_callback),
-        }
-        if lock_interval
-        else None,
+        callback={"type": "interval_ts", "interval": interval, "callback": callback_url} if lock_interval else None,
         use_proxy=True,
     )
 
-    if play_type == PLAY_FROM_START:
-        # A negative resume point seeks back from the live edge
+    if resume_target is not None:
+        # SlyGuy forces no_resume on live items, which drops the resume point; clearing it (and force_resume, to
+        # skip Kodi's own resume prompt) lets a positive resume_from through as a real Kodi ResumeTime, seeking to
+        # resume_target seconds from the start of the stream. Unlike the live-edge seek-back, this is an absolute
+        # position, so it lands exactly regardless of how long playback took to start.
+        item.no_resume = False
+        item.force_resume = True
+        item.resume_from = resume_target
+    elif play_type == PLAY_FROM_START:
+        # A negative resume point seeks back from the live edge to the start of the event
         item.resume_from = -offset
 
     return item
@@ -417,7 +441,23 @@ def play(asset_id, start=None, **kwargs):
 @plugin.route()
 def lock_callback(**kwargs):
     # Called on an interval during playback and once more when playback stops
-    if xbmc.Player().isPlaying():
+    player = xbmc.Player()
+    resume_asset = kwargs.get("resume_asset")
+    if player.isPlaying():
         api.refresh_lock()
+        # Keep a recent position as a fallback, in case playback ends without firing the stop callback below
+        if resume_asset:
+            try:
+                pos, total = int(player.getTime()), int(player.getTotalTime())
+                # getTime can briefly misread while seeking, so ignore values outside the DVR window
+                if 0 <= pos <= total + 30:
+                    userdata.set("resume", {"asset": resume_asset, "pos": pos})
+            except Exception:
+                pass
     else:
         api.release_lock()
+        # The stop callback forwards the exact getTime at the stop point, so record that as the resume position
+        if resume_asset:
+            stop_pos = int(kwargs.get("_time") or 0)
+            if stop_pos > 0:
+                userdata.set("resume", {"asset": resume_asset, "pos": stop_pos})

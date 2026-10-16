@@ -15,6 +15,7 @@ class Language(BaseLanguage):
     SUBSCRIPTION_INACTIVE = 30011
     JOIN_LIVE = 30012
     FROM_START = 30013
+    RESUME = 30014
 
 
 _ = Language()

@@ -52,3 +52,7 @@ msgstr ""
 msgctxt "#30013"
 msgid "From Start"
 msgstr ""
+
+msgctxt "#30014"
+msgid "Resume"
+msgstr ""
