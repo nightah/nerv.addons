@@ -215,5 +215,6 @@ class API:
         userdata.delete("dazn_id")
         userdata.delete("entitlements")
         userdata.delete("lock_id")
+        userdata.delete("resume")
         mem_cache.empty()
         self.new_session()

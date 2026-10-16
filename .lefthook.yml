@@ -127,4 +127,9 @@ commit-msg:
         echo ""
         echo "   Got: ${SUBJECT}"
         exit 1
+
+post-commit:
+  jobs:
+    - name: reset dev counter
+      run: rm -f dist/.dev-counter
 ...
