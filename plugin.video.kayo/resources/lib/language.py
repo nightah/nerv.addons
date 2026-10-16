@@ -13,6 +13,8 @@ class Language(BaseLanguage):
     NOT_STARTED = 30009
     LIVE = 30010
     SUBSCRIPTION_INACTIVE = 30011
+    JOIN_LIVE = 30012
+    FROM_START = 30013
 
 
 _ = Language()

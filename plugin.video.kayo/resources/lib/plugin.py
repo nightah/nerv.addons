@@ -7,7 +7,16 @@ import arrow
 from kodi_six import xbmc
 from six.moves.urllib_parse import parse_qsl, urlencode, urlparse, urlunparse
 from slyguy import gui, inputstream, plugin, signals, userdata
-from slyguy.constants import ADDON_ICON, ADDON_PATH, ROUTE_SETTINGS, ROUTE_TAG
+from slyguy.constants import (
+    ADDON_ICON,
+    ADDON_PATH,
+    PLAY_FROM_ASK,
+    PLAY_FROM_LIVE,
+    PLAY_FROM_START,
+    ROUTE_LIVE_TAG,
+    ROUTE_SETTINGS,
+    ROUTE_TAG,
+)
 from slyguy.util import async_tasks
 
 from .api import API
@@ -337,7 +346,10 @@ def _parse_tile(tile):
         info=info,
         playable=True,
         path=plugin.url_for(
-            play, asset_id=tile["AssetId"], start=tile.get("Start") if is_upcoming else None, _is_live=is_live
+            play,
+            asset_id=tile["AssetId"],
+            start=tile.get("Start") if is_upcoming or (is_live and not tile.get("IsLinear")) else None,
+            _is_live=is_live,
         ),
     )
 
@@ -348,6 +360,17 @@ def play(asset_id, start=None, **kwargs):
     if start and arrow.get(start) > arrow.utcnow():
         gui.ok(_(_.NOT_STARTED, start=arrow.get(start).to("local").humanize()))
         return
+
+    # Live events keep the whole event in the DVR window, so they can be joined live or watched from the start
+    offset = int((arrow.utcnow() - arrow.get(start)).total_seconds()) if start and kwargs.get(ROUTE_LIVE_TAG) else 0
+    play_type = PLAY_FROM_LIVE
+    if offset > 0:
+        play_type = settings.LIVE_PLAY_TYPE.value
+        if play_type == PLAY_FROM_ASK:
+            index = gui.context_menu([_.JOIN_LIVE, _.FROM_START])
+            if index == -1:
+                return
+            play_type = PLAY_FROM_START if index == 1 else PLAY_FROM_LIVE
 
     data = api.play(asset_id)
     details = data["PlaybackDetails"][0]
@@ -366,7 +389,7 @@ def play(asset_id, start=None, **kwargs):
 
     lock_interval = int((data.get("PlaybackLock") or {}).get("UpdateLockIntervalSeconds") or 0)
 
-    return plugin.Item(
+    item = plugin.Item(
         path=manifest_url,
         headers={"User-Agent": USER_AGENT},
         inputstream=inputstream.Widevine(
@@ -383,6 +406,12 @@ def play(asset_id, start=None, **kwargs):
         else None,
         use_proxy=True,
     )
+
+    if play_type == PLAY_FROM_START:
+        # A negative resume point seeks back from the live edge
+        item.resume_from = -offset
+
+    return item
 
 
 @plugin.route()
