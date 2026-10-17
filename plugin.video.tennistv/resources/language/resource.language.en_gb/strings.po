@@ -14,7 +14,7 @@ msgid "Tennis TV could not start playback: {error}"
 msgstr ""
 
 msgctxt "#30003"
-msgid "Go to [B]{url}[/B] on any device, sign in and enter this code:\n\n[B]{code}[/B]"
+msgid "Scan the QR code, or go to [B]{url}[/B] on any device, sign in and enter this code:\n\n[B]{code}[/B]"
 msgstr ""
 
 msgctxt "#30004"

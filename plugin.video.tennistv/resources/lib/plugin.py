@@ -49,8 +49,10 @@ def login(**kwargs):
     expires = int(data.get("expires_in", 600))
     interval = max(int(data.get("interval", 5)), 1)
 
-    with gui.progress(
-        _(_.DEVICE_CODE, url=data["verification_uri"], code=data["user_code"]), heading=_.LOGIN
+    # Scanning the QR opens the verification page with the code already filled in.
+    qr = data.get("verification_uri_complete") or data["verification_uri"]
+    with gui.progress_qr(
+        qr, _(_.DEVICE_CODE, url=data["verification_uri"], code=data["user_code"]), heading=_.LOGIN
     ) as progress:
         for elapsed in range(expires):
             if progress.iscanceled():
