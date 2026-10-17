@@ -1,7 +1,7 @@
 import os
-import time
 from time import gmtime
 
+import xbmc
 from slyguy import gui, inputstream, plugin, signals
 from slyguy.constants import ADDON_PATH
 
@@ -51,18 +51,19 @@ def login(**kwargs):
 
     # Scanning the QR opens the verification page with the code already filled in.
     qr = data.get("verification_uri_complete") or data["verification_uri"]
+    monitor = xbmc.Monitor()
     with gui.progress_qr(
         qr, _(_.DEVICE_CODE, url=data["verification_uri"], code=data["user_code"]), heading=_.LOGIN
     ) as progress:
         for elapsed in range(expires):
-            if progress.iscanceled():
+            # Wait through the monitor, not time.sleep: a raw sleep blocks the interpreter without yielding to
+            # Kodi, which drops the dialog after a beat while this loop keeps polling (the code only flashes up).
+            if progress.iscanceled() or monitor.waitForAbort(1):
                 return
 
             progress.update(int(elapsed * 100 / expires))
             if elapsed % interval == 0 and api.device_login(data["device_code"]):
                 break
-
-            time.sleep(1)
         else:
             return
 
