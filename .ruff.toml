@@ -6,5 +6,6 @@ line-length = 120
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF"]
 
 [lint.per-file-ignores]
-# The smoke test puts the addon and its shims on sys.path before importing them.
+# The smoke tests put the addon and its shims on sys.path before importing them.
 "plugin.video.kayo/tests/*" = ["E402"]
+"plugin.video.tennistv/tests/*" = ["E402"]

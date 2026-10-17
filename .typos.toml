@@ -16,3 +16,5 @@ licence = "licence"
 initialization = "initialization"
 humanize = "humanize"
 Authorization = "Authorization"
+# OAuth 2.0 device-grant polling error code, fixed by RFC 8628.
+authorization_pending = "authorization_pending"
