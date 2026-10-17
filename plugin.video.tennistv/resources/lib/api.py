@@ -22,10 +22,13 @@ from .constants import (
     LOGOUT_URL,
     PAGE_SIZE,
     PLAYBACK_API,
+    PLAYERS_URL,
     SEARCH_URL,
     SITE_URL,
     STREAMAMG_API_KEY,
     TOKEN_URL,
+    TOURNAMENTS_URL,
+    WATCHLIST_URL,
 )
 from .language import _
 
@@ -111,10 +114,49 @@ class API:
         return True
 
     @mem_cache.cached(60 * 5)
-    def content(self, tag, page=0, page_size=PAGE_SIZE):
-        params = {"tagNames": tag, "page": page, "pageSize": page_size}
+    def content(self, tag=None, references=None, page=0, page_size=PAGE_SIZE):
+        # tagNames filters by namespaced tag (video-type, year, live); references filters by ATP_PLAYER/ATP_TOURNAMENT.
+        params = {"page": page, "pageSize": page_size}
+        if tag:
+            params["tagNames"] = tag
+        if references:
+            params["references"] = references
         data = self._session.get(CONTENT_URL, params=params, headers={"account": ACCOUNT}).json()
         return data.get("content", []), data.get("pageInfo", {})
+
+    @mem_cache.cached(60 * 60)
+    def players(self):
+        # BIO content lists the featured players; each carries an ATP_PLAYER reference used to filter their videos.
+        data = self._session.get(PLAYERS_URL, params={"pageSize": 200}, headers={"account": ACCOUNT}).json()
+        players = []
+        for bio in data.get("content", []):
+            refs = bio.get("references") or []
+            sid = next((r.get("sid") for r in refs if r.get("type") == "ATP_PLAYER" and r.get("sid")), None)
+            if not sid:
+                continue
+            name = re.sub(r"\s+biography$", "", bio.get("title") or "", flags=re.IGNORECASE)
+            players.append({"name": name, "sid": sid, "thumb": bio.get("thumbnailUrl") or bio.get("imageUrl")})
+        players.sort(key=lambda p: p["name"].lower())
+        return players
+
+    @mem_cache.cached(60 * 60)
+    def tournaments(self, year):
+        # The calendar lists a season's tournaments by date range. Grand Slams are not ATP-owned, so TennisTV never
+        # carries their footage - drop them so the menu has no permanently empty folders.
+        params = {"from": f"{year}-01-01", "to": f"{year}-12-31", "size": 250, "page": 0}
+        data = self._session.get(TOURNAMENTS_URL, params=params, headers={"account": ACCOUNT}).json()
+        items = data if isinstance(data, list) else data.get("content", [])
+        return [t for t in items if t.get("id") and t.get("type") != "GS"]
+
+    def watchlist(self):
+        self._refresh_token()
+        # favoritemedia returns HTTP 415 without an explicit JSON content type, even though the request has no body.
+        resp = self._session.get(
+            WATCHLIST_URL,
+            params={"account": ACCOUNT, "mediaType": "VIDEO", "size": 100, "page": 1},
+            headers={"account": ACCOUNT, "Content-Type": "application/json"},
+        )
+        return resp.json().get("content", [])
 
     @mem_cache.cached(60 * 5)
     def content_by_id(self, video_id):

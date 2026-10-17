@@ -33,6 +33,15 @@ SEARCH_URL = "https://api.tennistv.com/search/v2/atpmedia"
 # Browse-by-year lists content tagged year:<YYYY>, from the current year back to this floor.
 EARLIEST_YEAR = 2016
 
+# Players: BIO content lists the featured players, each carrying an ATP_PLAYER reference; a player's videos come
+# from CONTENT_URL filtered by references=ATP_PLAYER:<sid>.
+PLAYERS_URL = "https://api.tennistv.com/content/atpmedia/BIO/EN"
+# Tournaments: the calendar lists a season's events (date-range filtered); each id+year makes the
+# references=ATP_TOURNAMENT:<id>_<year> filter for that tournament's videos.
+TOURNAMENTS_URL = "https://api.tennistv.com/tennis/v1/tournaments"
+# Watchlist: the account's saved videos. The endpoint returns HTTP 415 without an explicit JSON content type.
+WATCHLIST_URL = "https://api.tennistv.com/favoritemedia"
+
 # Playback: a per-video entitlement token, then the StreamAMG entry endpoint returns the manifest URL.
 ENTITLEMENT_URL = "https://api.tennistv.com/entitlementcheck/v1/videoentitlements/{guid}"
 PLAYBACK_API = "https://api.playback.streamamg.com/v1"

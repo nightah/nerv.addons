@@ -25,11 +25,16 @@ def home(**kwargs):
     if not api.logged_in:
         folder.add_item(label=_(_.LOGIN, _bold=True), art=_icon("account"), path=plugin.url_for(login), bookmark=False)
     else:
+        folder.add_item(label=_.LIVE, art=_icon("live"), path=plugin.url_for(category, tag="live", title=_.LIVE))
+        folder.add_item(label=_.TOURNAMENTS, art=_icon("tournaments"), path=plugin.url_for(tournaments))
+        folder.add_item(label=_.PLAYERS, art=_icon("players"), path=plugin.url_for(players))
+
         for title, tag, icon in CATEGORIES:
             folder.add_item(label=title, art=_icon(icon), path=plugin.url_for(category, tag=tag, title=title))
 
         folder.add_item(label=_.BROWSE_BY_YEAR, art=_icon("calendar"), path=plugin.url_for(years))
         folder.add_item(label=_.SEARCH, art=_icon("search"), path=plugin.url_for(search))
+        folder.add_item(label=_.WATCHLIST, art=_icon("watchlist"), path=plugin.url_for(watchlist))
 
         folder.add_item(label=_.LOGOUT, art=_icon("account"), path=plugin.url_for(logout), _kiosk=False, bookmark=False)
 
@@ -81,20 +86,66 @@ def logout(**kwargs):
 
 @plugin.route()
 @plugin.login_required()
-def category(tag, title=None, page=0, **kwargs):
+def category(tag=None, references=None, title=None, page=0, **kwargs):
     page = int(page)
     folder = plugin.Folder(title, content="videos")
 
-    items, info = api.content(tag, page=page)
+    items, info = api.content(tag=tag, references=references, page=page)
     folder.add_items([x for x in (_parse_item(item) for item in items) if x])
 
     if page + 1 < int(info.get("numPages") or 0):
+        nav = {"references": references} if references else {"tag": tag}
         folder.add_item(
             label=_(_.NEXT_PAGE, page=page + 2),
             art=_icon("folder"),
-            path=plugin.url_for(category, tag=tag, title=title, page=page + 1),
+            path=plugin.url_for(category, title=title, page=page + 1, **nav),
         )
 
+    return folder
+
+
+@plugin.route()
+@plugin.login_required()
+def tournaments(**kwargs):
+    folder = plugin.Folder(_.TOURNAMENTS)
+    for year in range(gmtime().tm_year, EARLIEST_YEAR - 1, -1):
+        folder.add_item(label=str(year), art=_icon("tournaments"), path=plugin.url_for(tournament_year, year=year))
+    return folder
+
+
+@plugin.route()
+@plugin.login_required()
+def tournament_year(year, **kwargs):
+    year = int(year)
+    folder = plugin.Folder(str(year))
+    for tourn in api.tournaments(year):
+        folder.add_item(
+            label=tourn.get("name"),
+            art=_icon("tournaments"),
+            path=plugin.url_for(category, references=f"ATP_TOURNAMENT:{tourn['id']}_{year}", title=tourn.get("name")),
+        )
+    return folder
+
+
+@plugin.route()
+@plugin.login_required()
+def players(**kwargs):
+    folder = plugin.Folder(_.PLAYERS)
+    for player in api.players():
+        art = {"thumb": player["thumb"]} if player.get("thumb") else _icon("players")
+        folder.add_item(
+            label=player["name"],
+            art=art,
+            path=plugin.url_for(category, references="ATP_PLAYER:" + player["sid"], title=player["name"]),
+        )
+    return folder
+
+
+@plugin.route()
+@plugin.login_required()
+def watchlist(**kwargs):
+    folder = plugin.Folder(_.WATCHLIST, content="videos")
+    folder.add_items([x for x in (_parse_item(item) for item in api.watchlist()) if x])
     return folder
 
 

@@ -8,6 +8,10 @@ class Language(BaseLanguage):
     DEVICE_CODE = 30003
     NEXT_PAGE = 30004
     BROWSE_BY_YEAR = 30005
+    LIVE = 30006
+    PLAYERS = 30007
+    TOURNAMENTS = 30008
+    WATCHLIST = 30009
 
 
 _ = Language()

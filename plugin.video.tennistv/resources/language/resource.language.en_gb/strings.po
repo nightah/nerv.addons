@@ -24,3 +24,19 @@ msgstr ""
 msgctxt "#30005"
 msgid "Browse by Year"
 msgstr ""
+
+msgctxt "#30006"
+msgid "Live"
+msgstr ""
+
+msgctxt "#30007"
+msgid "Players"
+msgstr ""
+
+msgctxt "#30008"
+msgid "Tournaments"
+msgstr ""
+
+msgctxt "#30009"
+msgid "My Watchlist"
+msgstr ""
