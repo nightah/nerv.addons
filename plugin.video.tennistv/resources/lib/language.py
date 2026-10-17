@@ -7,6 +7,7 @@ class Language(BaseLanguage):
     PLAYBACK_ERROR = 30002
     DEVICE_CODE = 30003
     NEXT_PAGE = 30004
+    BROWSE_BY_YEAR = 30005
 
 
 _ = Language()

@@ -25,6 +25,13 @@ DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
 # Catalogue (public, needs only the account header). Paginated, newest first; tagNames filters by namespaced tag.
 CONTENT_URL = "https://api.tennistv.com/content/atpmedia/VIDEO/EN"
 PAGE_SIZE = 30
+LANG = "EN"
+
+# Search returns hits carrying a numeric objectId; resolve it to a mediaGuid via CONTENT_URL/<id>.
+SEARCH_URL = "https://api.tennistv.com/search/v2/atpmedia"
+
+# Browse-by-year lists content tagged year:<YYYY>, from the current year back to this floor.
+EARLIEST_YEAR = 2016
 
 # Playback: a per-video entitlement token, then the StreamAMG entry endpoint returns the manifest URL.
 ENTITLEMENT_URL = "https://api.tennistv.com/entitlementcheck/v1/videoentitlements/{guid}"

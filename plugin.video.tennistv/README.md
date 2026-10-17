@@ -12,10 +12,12 @@ repository `CLAUDE.md`.
 
 ## Menu
 
-Replays and highlights are grouped by content type: Match Highlights, Extended Highlights, Daily Highlights,
-Short Highlights, Hot Shots, Replays, Features, Interviews and Doubles. Each is a paginated, newest-first list.
+Replays and highlights are grouped by content type (Match Highlights, Extended Highlights, Daily Highlights,
+Short Highlights, Hot Shots, Replays, Features, Interviews, Doubles), plus Browse by Year and Search. Each list
+is paginated, newest first.
 
-Not yet implemented (future work): browse by tournament/year, Players, Live events, Search and Watchlist.
+Not yet implemented: Players and Tournaments (the content API offers no filter for either), Watchlist (no
+public endpoint) and Live events (the live playback path is only observable while a match is on air).
 
 ## Development
 

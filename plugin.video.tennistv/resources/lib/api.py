@@ -18,9 +18,11 @@ from .constants import (
     DEVICE_URL,
     ENTITLEMENT_URL,
     HEADERS,
+    LANG,
     LOGOUT_URL,
     PAGE_SIZE,
     PLAYBACK_API,
+    SEARCH_URL,
     SITE_URL,
     STREAMAMG_API_KEY,
     TOKEN_URL,
@@ -113,6 +115,16 @@ class API:
         params = {"tagNames": tag, "page": page, "pageSize": page_size}
         data = self._session.get(CONTENT_URL, params=params, headers={"account": ACCOUNT}).json()
         return data.get("content", []), data.get("pageInfo", {})
+
+    @mem_cache.cached(60 * 5)
+    def content_by_id(self, video_id):
+        # Resolve a numeric content id (eg. from a search hit) to its full item, including the mediaGuid.
+        return self._session.get(f"{CONTENT_URL}/{video_id}", headers={"account": ACCOUNT}).json()
+
+    def search(self, query):
+        params = {"searchTerm": query, "langCode": LANG}
+        data = self._session.get(SEARCH_URL, params=params, headers={"account": ACCOUNT}).json()
+        return [hit["data"] for hit in data.get("hits", []) if hit.get("contentType") == "VIDEO"]
 
     def _streamamg_key(self, refresh=False):
         # The X-Api-Key is a public client constant published in the site's JS bundle. It is cached, falls back to

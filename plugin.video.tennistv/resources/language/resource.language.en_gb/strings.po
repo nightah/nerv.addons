@@ -20,3 +20,7 @@ msgstr ""
 msgctxt "#30004"
 msgid "Next Page ({page})"
 msgstr ""
+
+msgctxt "#30005"
+msgid "Browse by Year"
+msgstr ""
