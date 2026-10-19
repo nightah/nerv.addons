@@ -181,10 +181,10 @@ class API:
         # Career head-to-head between two ATP player sids, plus each player's bio.
         return self._session.get(H2H_URL.format(p1=p1, p2=p2), headers={"account": ACCOUNT}).json()
 
-    @mem_cache.cached(30)
+    @mem_cache.cached(10)
     def match_stats(self, tid, year, match_id):
-        # Live or final match statistics (serve, return, points) per set and for the whole match. Cached briefly so
-        # the overlay can poll a live match without hammering the API.
+        # Live or final match statistics (serve, return, points) per set and for the whole match. Cached only
+        # briefly so a live match stays fresh when the overlay polls it (the web polls live data every 15s).
         url = MATCH_STATS_URL.format(tid=tid, year=year, match_id=match_id)
         return self._session.get(url, headers={"account": ACCOUNT}).json()
 

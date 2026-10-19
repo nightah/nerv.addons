@@ -14,7 +14,7 @@ TITLE_ID, SCORE_ID, BODY_ID = 100, 101, 50
 TABS = (TAB_STATS, TAB_DRAW, TAB_H2H)
 TAB_X = {TAB_STATS: 1456, TAB_DRAW: 1604, TAB_H2H: 1752}
 
-POLL_SECONDS = 20
+POLL_SECONDS = 15  # the web polls live match data every 15s; a replay fetches once and stops
 
 # Web palette: dark navy panel, teal accent, muted labels.
 TEAL = "FF2FB8AC"
