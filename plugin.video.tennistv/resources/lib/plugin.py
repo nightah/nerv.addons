@@ -2,6 +2,7 @@ import os
 from time import gmtime
 
 import xbmc
+import xbmcgui
 from slyguy import gui, inputstream, plugin, signals, userdata
 from slyguy.constants import ADDON_PATH, PLAY_FROM_ASK, PLAY_FROM_LIVE, PLAY_FROM_START
 
@@ -192,10 +193,16 @@ def _search_item(data):
 
 @plugin.route()
 @plugin.login_required()
-def play(media_guid=None, video_id=None, **kwargs):
+def play(media_guid=None, video_id=None, match=None, match_title=None, **kwargs):
     # Search results carry a numeric video_id; catalogue items carry a mediaGuid directly.
     if not media_guid and video_id:
-        media_guid = api.content_by_id(video_id).get("mediaGuid")
+        content = api.content_by_id(video_id)
+        media_guid = content.get("mediaGuid")
+        if not match:
+            match, match_title = _match_ref(content)
+
+    # Make the match this video belongs to available to the Match Info overlay (empty for non-match videos).
+    _set_match_context(match, match_title)
 
     # Match feeds and alternate angles are live events that can be joined live, watched from the start, or resumed;
     # the live play action setting decides, or asks. The ask prompt comes before the playback calls so a cancel
@@ -314,10 +321,53 @@ def _parse_item(item):
     if item.get("date"):
         info["aired"] = item["date"][:10]
 
+    match, match_title = _match_ref(item)
+
     return plugin.Item(
         label=item.get("title"),
         art={"thumb": item.get("thumbnailUrl") or item.get("imageUrl")},
         info=info,
         playable=True,
-        path=plugin.url_for(play, media_guid=media_guid, _is_live=is_live, seekable=1 if seekable else None),
+        path=plugin.url_for(
+            play,
+            media_guid=media_guid,
+            match=match,
+            match_title=match_title,
+            _is_live=is_live,
+            seekable=1 if seekable else None,
+        ),
     )
+
+
+def _match_ref(item):
+    # A match video's references carry ATP_MATCH:<tid>_<year>_<matchId>; its metadata carries the "A vs B" title.
+    refs = item.get("references") or []
+    match = next((r.get("sid") for r in refs if r.get("type") == "ATP_MATCH" and r.get("sid")), None)
+    if not match:
+        return None, None
+    return match, (item.get("metadata") or {}).get("displayTitle")
+
+
+def _set_match_context(match, title):
+    # Stash the playing match on the home window so the Match Info overlay (a separate invocation) can read it.
+    win = xbmcgui.Window(10000)
+    if match:
+        win.setProperty("tennistv.match", match)
+        win.setProperty("tennistv.match_title", title or "")
+    else:
+        win.clearProperty("tennistv.match")
+        win.clearProperty("tennistv.match_title")
+
+
+@plugin.route()
+def match_info(**kwargs):
+    # Opened by the bundled keymap while a match is playing; shows the live stats, draw and head-to-head overlay.
+    win = xbmcgui.Window(10000)
+    match = win.getProperty("tennistv.match")
+    if not match or not xbmc.Player().isPlaying():
+        gui.notification(_.NO_MATCH_INFO)
+        return
+
+    from .matchinfo import MatchInfo
+
+    MatchInfo.show(api, match, win.getProperty("tennistv.match_title"))

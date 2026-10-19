@@ -52,3 +52,27 @@ msgstr ""
 msgctxt "#30012"
 msgid "Resume"
 msgstr ""
+
+msgctxt "#30013"
+msgid "Match Info"
+msgstr ""
+
+msgctxt "#30014"
+msgid "Stats"
+msgstr ""
+
+msgctxt "#30015"
+msgid "Draw"
+msgstr ""
+
+msgctxt "#30016"
+msgid "Head to Head"
+msgstr ""
+
+msgctxt "#30017"
+msgid "Match info is not available for this video"
+msgstr ""
+
+msgctxt "#30018"
+msgid "{p1} {wins1} - {wins2} {p2}"
+msgstr ""

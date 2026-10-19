@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- While a match is playing, open the Match Info overlay (live stats, draw, head-to-head).
+    Bound to the keyboard "m" key and the remote yellow button; rebind in your own keymap if these clash. -->
+<keymap>
+    <FullscreenVideo>
+        <keyboard>
+            <m>RunPlugin(plugin://plugin.video.tennistv/?_=match_info)</m>
+        </keyboard>
+        <remote>
+            <yellow>RunPlugin(plugin://plugin.video.tennistv/?_=match_info)</yellow>
+        </remote>
+    </FullscreenVideo>
+</keymap>

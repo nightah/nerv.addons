@@ -15,6 +15,12 @@ class Language(BaseLanguage):
     JOIN_LIVE = 30010
     FROM_START = 30011
     RESUME = 30012
+    MATCH_INFO = 30013
+    TAB_STATS = 30014
+    TAB_DRAW = 30015
+    TAB_H2H = 30016
+    NO_MATCH_INFO = 30017
+    H2H_RECORD = 30018
 
 
 _ = Language()

@@ -42,6 +42,12 @@ TOURNAMENTS_URL = "https://api.tennistv.com/tennis/v1/tournaments"
 # Watchlist: the account's saved videos. The endpoint returns HTTP 415 without an explicit JSON content type.
 WATCHLIST_URL = "https://api.tennistv.com/favoritemedia"
 
+# Match info overlay: the ATP data behind the web player's side panels, all public (account header only).
+# A match video's references carry ATP_MATCH:<tid>_<year>_<matchId> and two ATP_PLAYER:<sid>, which key these.
+MATCH_STATS_URL = "https://api.tennistv.com/tennis/v1/tournaments/{tid}/{year}/matches/{match_id}/stats"
+DRAW_URL = "https://api.tennistv.com/tennis/v1/tournaments/{tid}/{year}/draws"
+H2H_URL = "https://api.tennistv.com/tennis/v1/players/{p1}/headtohead/{p2}"
+
 # Playback: a per-video entitlement token, then the StreamAMG entry endpoint returns the manifest URL.
 ENTITLEMENT_URL = "https://api.tennistv.com/entitlementcheck/v1/videoentitlements/{guid}"
 PLAYBACK_API = "https://api.playback.streamamg.com/v1"

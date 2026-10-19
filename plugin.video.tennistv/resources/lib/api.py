@@ -16,10 +16,13 @@ from .constants import (
     CONTENT_URL,
     DEVICE_GRANT,
     DEVICE_URL,
+    DRAW_URL,
     ENTITLEMENT_URL,
+    H2H_URL,
     HEADERS,
     LANG,
     LOGOUT_URL,
+    MATCH_STATS_URL,
     PAGE_SIZE,
     PLAYBACK_API,
     PLAYERS_URL,
@@ -167,6 +170,23 @@ class API:
         params = {"searchTerm": query, "langCode": LANG}
         data = self._session.get(SEARCH_URL, params=params, headers={"account": ACCOUNT}).json()
         return [hit["data"] for hit in data.get("hits", []) if hit.get("contentType") == "VIDEO"]
+
+    @mem_cache.cached(60 * 60)
+    def draw(self, tid, year):
+        # The tournament bracket by event (MS/doubles), keyed by tournament id + year from a match's ATP_MATCH ref.
+        return self._session.get(DRAW_URL.format(tid=tid, year=year), headers={"account": ACCOUNT}).json()
+
+    @mem_cache.cached(60 * 60 * 24)
+    def head_to_head(self, p1, p2):
+        # Career head-to-head between two ATP player sids, plus each player's bio.
+        return self._session.get(H2H_URL.format(p1=p1, p2=p2), headers={"account": ACCOUNT}).json()
+
+    @mem_cache.cached(30)
+    def match_stats(self, tid, year, match_id):
+        # Live or final match statistics (serve, return, points) per set and for the whole match. Cached briefly so
+        # the overlay can poll a live match without hammering the API.
+        url = MATCH_STATS_URL.format(tid=tid, year=year, match_id=match_id)
+        return self._session.get(url, headers={"account": ACCOUNT}).json()
 
     def _streamamg_key(self, refresh=False):
         # The X-Api-Key is a public client constant published in the site's JS bundle. It is cached, falls back to
