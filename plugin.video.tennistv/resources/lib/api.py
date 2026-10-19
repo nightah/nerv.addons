@@ -135,7 +135,7 @@ class API:
             if not sid:
                 continue
             name = re.sub(r"\s+biography$", "", bio.get("title") or "", flags=re.IGNORECASE)
-            players.append({"name": name, "sid": sid, "thumb": bio.get("thumbnailUrl") or bio.get("imageUrl")})
+            players.append({"name": name, "sid": sid})
         players.sort(key=lambda p: p["name"].lower())
         return players
 

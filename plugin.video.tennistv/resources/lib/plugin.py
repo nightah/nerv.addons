@@ -138,10 +138,9 @@ def tournament_year(year, **kwargs):
 def players(**kwargs):
     folder = plugin.Folder(_.PLAYERS)
     for player in api.players():
-        art = {"thumb": player["thumb"]} if player.get("thumb") else _icon("players")
         folder.add_item(
             label=player["name"],
-            art=art,
+            art=_player_art(player["sid"]),
             path=plugin.url_for(category, references="ATP_PLAYER:" + player["sid"], title=player["name"]),
         )
     return folder
@@ -289,6 +288,14 @@ def _icon(name):
     # Bundled icons have a solid background so they stay visible on skin focus highlights
     path = os.path.join(ADDON_PATH, "resources", "media", f"{name}.png")
     return {"thumb": path, "icon": path}
+
+
+def _player_art(sid):
+    # Headshots are vendored by ATP sid (see tools/tennistv-headshots); fall back to the generic icon if missing.
+    path = os.path.join(ADDON_PATH, "resources", "media", "players", f"{sid}.png")
+    if os.path.exists(path):
+        return {"thumb": path, "icon": path}
+    return _icon("players")
 
 
 def _parse_item(item):
