@@ -21,6 +21,13 @@ class Language(BaseLanguage):
     TAB_H2H = 30016
     NO_MATCH_INFO = 30017
     H2H_RECORD = 30018
+    BIND_PROMPT = 30019
+    BIND_PRESS = 30020
+    BIND_DONE = 30021
+    BIND_CLEARED = 30022
+    MATCH_INFO_BUTTON = 30023
+    BIND_CHANGE = 30024
+    BIND_CLEAR = 30025
 
 
 _ = Language()

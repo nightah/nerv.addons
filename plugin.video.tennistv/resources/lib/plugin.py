@@ -42,6 +42,13 @@ def home(**kwargs):
         folder.add_item(label=_.BROWSE_BY_YEAR, art=_icon("calendar"), path=plugin.url_for(years))
         folder.add_item(label=_.SEARCH, art=_icon("search"), path=plugin.url_for(search))
         folder.add_item(label=_.WATCHLIST, art=_icon("watchlist"), path=plugin.url_for(watchlist))
+        folder.add_item(
+            label=_.MATCH_INFO_BUTTON,
+            art=_icon("settings"),
+            path=plugin.url_for(match_info_button),
+            _kiosk=False,
+            bookmark=False,
+        )
 
         folder.add_item(label=_.LOGOUT, art=_icon("account"), path=plugin.url_for(logout), _kiosk=False, bookmark=False)
 
@@ -243,6 +250,13 @@ def play(media_guid=None, video_id=None, match=None, match_title=None, **kwargs)
             # A negative resume point seeks back from the live edge to the start of the DVR window
             item.resume_from = -SEEK_TO_START
 
+    # On the first match played, offer to bind a button for the overlay (no global keymap is shipped).
+    if match and not userdata.get("match_info_asked"):
+        userdata.set("match_info_asked", True)
+        from .keybind import prompt_first_run
+
+        prompt_first_run()
+
     return item
 
 
@@ -371,3 +385,19 @@ def match_info(**kwargs):
     from .matchinfo import MatchInfo
 
     MatchInfo.show(api, match, win.getProperty("tennistv.match_title"))
+
+
+@plugin.route()
+@plugin.login_required()
+def match_info_button(**kwargs):
+    # Bind, change or clear the button that opens the overlay during playback.
+    from .keybind import bind, clear, is_bound
+
+    if is_bound():
+        index = gui.context_menu([_.BIND_CHANGE, _.BIND_CLEAR])
+        if index == 0:
+            bind()
+        elif index == 1:
+            clear()
+    else:
+        bind()

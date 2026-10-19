@@ -76,3 +76,31 @@ msgstr ""
 msgctxt "#30018"
 msgid "{p1} {wins1} - {wins2} {p2}"
 msgstr ""
+
+msgctxt "#30019"
+msgid "Open the Match Info overlay (live stats, draw, head-to-head) during playback with a button of your choice? You can set this later from Match Info Button in the menu."
+msgstr ""
+
+msgctxt "#30020"
+msgid "Press the button to use for Match Info, or Back to cancel"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Match Info button set"
+msgstr ""
+
+msgctxt "#30022"
+msgid "Match Info button cleared"
+msgstr ""
+
+msgctxt "#30023"
+msgid "Match Info Button"
+msgstr ""
+
+msgctxt "#30024"
+msgid "Change button"
+msgstr ""
+
+msgctxt "#30025"
+msgid "Clear button"
+msgstr ""
