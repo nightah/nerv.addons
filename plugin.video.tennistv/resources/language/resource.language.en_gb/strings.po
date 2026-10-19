@@ -104,3 +104,11 @@ msgstr ""
 msgctxt "#30025"
 msgid "Clear button"
 msgstr ""
+
+msgctxt "#30026"
+msgid "This match has finished. Reveal the score and statistics? They give away the result."
+msgstr ""
+
+msgctxt "#30027"
+msgid "Statistics hidden to avoid spoilers. Reopen the overlay to reveal them."
+msgstr ""

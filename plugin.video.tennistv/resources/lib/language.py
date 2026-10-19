@@ -28,6 +28,8 @@ class Language(BaseLanguage):
     MATCH_INFO_BUTTON = 30023
     BIND_CHANGE = 30024
     BIND_CLEAR = 30025
+    SPOILER_PROMPT = 30026
+    SPOILER_HIDDEN = 30027
 
 
 _ = Language()
