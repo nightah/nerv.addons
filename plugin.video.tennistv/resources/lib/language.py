@@ -12,6 +12,9 @@ class Language(BaseLanguage):
     PLAYERS = 30007
     TOURNAMENTS = 30008
     WATCHLIST = 30009
+    JOIN_LIVE = 30010
+    FROM_START = 30011
+    RESUME = 30012
 
 
 _ = Language()

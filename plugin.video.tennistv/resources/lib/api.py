@@ -229,5 +229,6 @@ class API:
         userdata.delete("access_token")
         userdata.delete("refresh_token")
         userdata.delete("expires")
+        userdata.delete("resume")
         mem_cache.empty()
         self.new_session()
