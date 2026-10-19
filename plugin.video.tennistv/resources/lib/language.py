@@ -30,6 +30,8 @@ class Language(BaseLanguage):
     BIND_CLEAR = 30025
     SPOILER_PROMPT = 30026
     SPOILER_HIDDEN = 30027
+    STATS_MATCH = 30028
+    STATS_SET = 30029
 
 
 _ = Language()

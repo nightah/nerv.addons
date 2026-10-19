@@ -112,3 +112,11 @@ msgstr ""
 msgctxt "#30027"
 msgid "Statistics hidden to avoid spoilers. Reopen the overlay to reveal them."
 msgstr ""
+
+msgctxt "#30028"
+msgid "Match"
+msgstr ""
+
+msgctxt "#30029"
+msgid "Set {n}"
+msgstr ""

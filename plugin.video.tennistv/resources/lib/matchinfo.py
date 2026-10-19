@@ -7,52 +7,56 @@ from slyguy.constants import ADDON_PATH
 
 from .language import _
 
-# Control ids in MatchInfo.xml
+# Static control ids in MatchInfo.xml
 TAB_STATS, TAB_DRAW, TAB_H2H = 10, 11, 12
+SET_BTN_BASE, SET_BTN_MAX = 20, 5  # buttons 20..24: Match + up to four sets
 TITLE_ID, SCORE_ID, BODY_ID = 100, 101, 50
 TABS = (TAB_STATS, TAB_DRAW, TAB_H2H)
-TAB_X = {TAB_STATS: 1448, TAB_DRAW: 1598, TAB_H2H: 1748}
+TAB_X = {TAB_STATS: 1456, TAB_DRAW: 1604, TAB_H2H: 1752}
 
 POLL_SECONDS = 20
 
-# Colours (AARRGGBB) matching the Tennis TV web overlay: dark navy panel, teal accent, muted labels.
+# Web palette: dark navy panel, teal accent, muted labels.
 TEAL = "FF2FB8AC"
 WHITE = "FFE6EAF0"
 MUTED = "FF8A93A0"
-TRACK_BG = "22FFFFFF"
+CARD = "14FFFFFF"
 
-# Layout (1920x1080): a thin right-hand panel.
-CONTENT_X = 1448
-LVAL_X, LVAL_W = 1448, 90
-NAME_X, NAME_W = 1540, 260
-RVAL_X, RVAL_W = 1802, 90
-TRACK_X, TRACK_W = 1448, 444
-START_Y, HEAD_H, ROW_H, BAR_DY, BAR_H = 186, 34, 46, 30, 6
+# Layout (1920x1080)
+CX, CW = 1456, 438
+LVAL_X, LVAL_W = 1456, 84
+NAME_X, NAME_W = 1544, 262
+RVAL_X, RVAL_W = 1810, 84
+BAR_GAP = 96
+SERVICE_Y = 258
 AL_LEFT, AL_RIGHT, AL_CENTRE = 4, 5, 6
 
+# (display label, API key) using the web's wording.
 SERVICE_ROWS = (
     ("Aces", "Aces"),
     ("Double Faults", "DoubleFaults"),
-    ("First Serve", "FirstServe"),
-    ("1st Serve Points Won", "FirstServePointsWon"),
-    ("2nd Serve Points Won", "SecondServePointsWon"),
+    ("First Serve In", "FirstServe"),
+    ("First Serve Points Won", "FirstServePointsWon"),
+    ("Second Serve Points Won", "SecondServePointsWon"),
     ("Break Points Saved", "BreakPointsSaved"),
     ("Service Games Played", "ServiceGamesPlayed"),
 )
 RETURN_ROWS = (
-    ("1st Return Points Won", "FirstServeReturnPointsWon"),
-    ("2nd Return Points Won", "SecondServeReturnPointsWon"),
+    ("First Return Points Won", "FirstServeReturnPointsWon"),
+    ("Second Return Points Won", "SecondServeReturnPointsWon"),
     ("Break Points Converted", "BreakPointsConverted"),
     ("Return Games Played", "ReturnGamesPlayed"),
 )
 SECTIONS = (("SERVICE", "ServiceStats", SERVICE_ROWS), ("RETURN", "ReturnStats", RETURN_ROWS))
+RATIO_KEYS = {"BreakPointsSaved", "BreakPointsConverted"}
 
 
-def _value(stat):
+def _value(stat, key):
+    # Match the web: a ratio for break points, a percentage for percentage stats, otherwise the raw count.
     if not isinstance(stat, dict):
         return "-"
-    if "Percent" in stat and stat.get("Divisor"):
-        return f"{stat['Dividend']}/{stat['Divisor']} ({round(stat['Percent'])}%)"
+    if key in RATIO_KEYS and "Dividend" in stat:
+        return f"{stat['Dividend']}/{stat['Divisor']}"
     if "Percent" in stat:
         return f"{round(stat['Percent'])}%"
     if "Number" in stat:
@@ -70,14 +74,19 @@ def _numeric(stat):
     return 0.0
 
 
-def _match_totals(team):
+def _set_stats(team, set_num):
     sets = team.get("Sets") or []
-    whole = next((s for s in sets if s.get("SetNumber") == 0), None)
-    return (whole or (sets[0] if sets else {})).get("Stats") or {}
+    chosen = next((s for s in sets if s.get("SetNumber") == set_num), None)
+    return (chosen or (sets[0] if sets else {})).get("Stats") or {}
 
 
 def _white():
     return os.path.join(ADDON_PATH, "resources", "skins", "Default", "media", "white.png")
+
+
+def _headshot(sid):
+    path = os.path.join(ADDON_PATH, "resources", "media", "players", f"{sid}.png")
+    return path if sid and os.path.exists(path) else None
 
 
 class MatchInfo(xbmcgui.WindowXMLDialog):
@@ -88,7 +97,6 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         except ValueError:
             return
         stats = api.match_stats(tid, year, match_id) or {}
-        # A finished match is a replay: hide the score and stats behind a spoiler prompt.
         revealed = True
         if stats.get("Status") == "Finished":
             revealed = gui.yes_no(_.SPOILER_PROMPT)
@@ -103,10 +111,12 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         self._title = title or ""
         self._revealed = revealed
         self._tab = TAB_STATS
+        self._set_num = 0
         self._stop = threading.Event()
         self._cache = {"stats": stats}
         self._rows = []
         self._stat_ctrls = []
+        self._set_map = {}
 
     # --- lifecycle ---
 
@@ -115,13 +125,15 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         self.getControl(TAB_STATS).setLabel(_.TAB_STATS)
         self.getControl(TAB_DRAW).setLabel(_.TAB_DRAW)
         self.getControl(TAB_H2H).setLabel(_.TAB_H2H)
-        self._indicator = xbmcgui.ControlImage(TAB_X[TAB_STATS], 162, 142, 3, _white(), colorDiffuse=f"0x{TEAL}")
+        self._indicator = xbmcgui.ControlImage(TAB_X[TAB_STATS], 136, 140, 3, _white(), colorDiffuse=f"0x{TEAL}")
         self.addControl(self._indicator)
         self._spoiler = xbmcgui.ControlLabel(
-            CONTENT_X, 320, TRACK_W, 60, _.SPOILER_HIDDEN, font="font12", textColor=MUTED, alignment=AL_CENTRE
+            CX, 360, CW, 60, _.SPOILER_HIDDEN, font="font10", textColor=MUTED, alignment=AL_CENTRE
         )
         self.addControl(self._spoiler)
+        self._build_header()
         self._build_rows()
+        self._build_set_toggle()
         self._set_tab(TAB_STATS)
         threading.Thread(target=self._poll, daemon=True).start()
 
@@ -132,35 +144,75 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
     def onClick(self, control_id):
         if control_id in TABS:
             self._set_tab(control_id)
+        elif control_id in self._set_map:
+            self._set_num = self._set_map[control_id]
+            self._render()
 
     def close(self):
         self._stop.set()
         super().close()
 
-    # --- stat row controls (built once, updated on render) ---
+    # --- programmatic controls ---
+
+    def _build_header(self):
+        # Two players: headshot (when vendored), surname and three-letter country code, from the head-to-head data.
+        data = self._h2h()
+        pl, op = data.get("Player") or {}, data.get("Opponent") or {}
+        p1, p2 = self._player_ids()
+        for sid, person, align in ((p1, pl, AL_LEFT), (p2, op, AL_RIGHT)):
+            shot = _headshot(sid)
+            if shot:
+                x = CX if align == AL_LEFT else CX + CW - 56
+                self._add(xbmcgui.ControlImage(x, 136, 56, 56, shot))
+            tx = CX + 64 if align == AL_LEFT else CX
+            tw = CW - 64
+            name = person.get("LastName") or ""
+            code = person.get("NatlId") or ""
+            self._add(xbmcgui.ControlLabel(tx, 140, tw, 24, name, font="font11", textColor=WHITE, alignment=align))
+            self._add(xbmcgui.ControlLabel(tx, 166, tw, 22, code, font="font10", textColor=MUTED, alignment=align))
 
     def _build_rows(self):
-        y = START_Y
+        y = SERVICE_Y
         for heading, group, rows in SECTIONS:
-            self._add(xbmcgui.ControlLabel(CONTENT_X, y, TRACK_W, HEAD_H, heading, font="font12", textColor=MUTED))
-            y += HEAD_H
+            self._add(xbmcgui.ControlImage(CX, y, CW, 26, _white(), colorDiffuse=f"0x{CARD}"))
+            self._add(
+                xbmcgui.ControlLabel(
+                    CX + 10, y, CW - 20, 26, heading, font="font10", textColor=MUTED, alignment=AL_LEFT
+                )
+            )
+            y += 34
             for label, key in rows:
-                lval = self._add(xbmcgui.ControlLabel(LVAL_X, y, LVAL_W, 26, "", font="font12", alignment=AL_RIGHT))
+                lval = self._add(xbmcgui.ControlLabel(LVAL_X, y, LVAL_W, 22, "", font="font10", alignment=AL_RIGHT))
                 self._add(
                     xbmcgui.ControlLabel(
-                        NAME_X, y, NAME_W, 26, label, font="font12", textColor=WHITE, alignment=AL_CENTRE
+                        NAME_X, y, NAME_W, 22, label, font="font10", textColor=WHITE, alignment=AL_CENTRE
                     )
                 )
-                rval = self._add(xbmcgui.ControlLabel(RVAL_X, y, RVAL_W, 26, "", font="font12", alignment=AL_LEFT))
-                self._add(
-                    xbmcgui.ControlImage(TRACK_X, y + BAR_DY, TRACK_W, BAR_H, _white(), colorDiffuse=f"0x{TRACK_BG}")
-                )
-                fill = self._add(
-                    xbmcgui.ControlImage(TRACK_X, y + BAR_DY, TRACK_W, BAR_H, _white(), colorDiffuse=f"0x{TEAL}")
-                )
-                self._rows.append({"group": group, "key": key, "lval": lval, "rval": rval, "fill": fill})
-                y += ROW_H
-            y += 12
+                rval = self._add(xbmcgui.ControlLabel(RVAL_X, y, RVAL_W, 22, "", font="font10", alignment=AL_LEFT))
+                lbar = self._add(xbmcgui.ControlImage(CX, y + 24, 1, 4, _white(), colorDiffuse=f"0x{TEAL}"))
+                rbar = self._add(xbmcgui.ControlImage(CX + CW, y + 24, 1, 4, _white(), colorDiffuse=f"0x{TEAL}"))
+                self._rows.append({"group": group, "key": key, "lval": lval, "rval": rval, "lbar": lbar, "rbar": rbar})
+                y += 38
+            y += 10
+
+    def _build_set_toggle(self):
+        team = (self._stats().get("PlayerTeam1") or {}).get("Sets") or []
+        sets = sorted({s.get("SetNumber") for s in team if s.get("SetNumber")})
+        items = [(_.STATS_MATCH, 0)] + [(_(_.STATS_SET, n=n), n) for n in sets]
+        visible = []
+        for i in range(SET_BTN_MAX):
+            btn = self.getControl(SET_BTN_BASE + i)
+            if i < len(items):
+                label, num = items[i]
+                btn.setLabel(label)
+                btn.setVisible(True)
+                self._set_map[SET_BTN_BASE + i] = num
+                visible.append(btn)
+            else:
+                btn.setVisible(False)
+        for i, btn in enumerate(visible):
+            btn.controlLeft(visible[i - 1])
+            btn.controlRight(visible[(i + 1) % len(visible)])
 
     def _add(self, control):
         self.addControl(control)
@@ -171,10 +223,12 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
 
     def _set_tab(self, tab):
         self._tab = tab
-        self._indicator.setPosition(TAB_X[tab], 162)
+        self._indicator.setPosition(TAB_X[tab], 136)
         stats_on = tab == TAB_STATS and self._revealed
         for ctrl in self._stat_ctrls:
             ctrl.setVisible(stats_on)
+        for cid in self._set_map:
+            self.getControl(cid).setVisible(stats_on)
         self._spoiler.setVisible(tab == TAB_STATS and not self._revealed)
         self.getControl(BODY_ID).setVisible(tab in (TAB_DRAW, TAB_H2H))
         self._render()
@@ -184,29 +238,33 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             self.getControl(SCORE_ID).setLabel(self._score_text() if self._revealed else "")
             if self._revealed:
                 self._render_stats()
-        elif self._tab == TAB_DRAW:
-            self.getControl(SCORE_ID).setLabel("")
-            self.getControl(BODY_ID).setText(self._draw_text())
         else:
             self.getControl(SCORE_ID).setLabel("")
-            self.getControl(BODY_ID).setText(self._h2h_text())
+            self.getControl(BODY_ID).setText(self._draw_text() if self._tab == TAB_DRAW else self._h2h_text())
 
     def _render_stats(self):
         data = self._stats()
-        s1 = _match_totals(data.get("PlayerTeam1") or {})
-        s2 = _match_totals(data.get("PlayerTeam2") or {})
+        s1 = _set_stats(data.get("PlayerTeam1") or {}, self._set_num)
+        s2 = _set_stats(data.get("PlayerTeam2") or {}, self._set_num)
+        avail = CW - BAR_GAP
         for row in self._rows:
             g1 = (s1.get(row["group"]) or {}).get(row["key"])
             g2 = (s2.get(row["group"]) or {}).get(row["key"])
             n1, n2 = _numeric(g1), _numeric(g2)
-            row["lval"].setLabel(self._coloured(_value(g1), n1 >= n2 and (n1 or n2)))
-            row["rval"].setLabel(self._coloured(_value(g2), n2 >= n1 and (n1 or n2)))
+            row["lval"].setLabel(self._lead(_value(g1, row["key"]), n1 >= n2 and (n1 or n2)))
+            row["rval"].setLabel(self._lead(_value(g2, row["key"]), n2 >= n1 and (n1 or n2)))
             total = n1 + n2
-            row["fill"].setWidth(int(TRACK_W * n1 / total) if total else 0)
+            lw = max(int(avail * n1 / total) if total else 0, 1)
+            rw = max(int(avail * n2 / total) if total else 0, 1)
+            row["lbar"].setWidth(lw)
+            row["rbar"].setWidth(rw)
+            row["rbar"].setPosition(CX + CW - rw, row["rbar"].getPosition()[1])
 
     @staticmethod
-    def _coloured(text, lead):
+    def _lead(text, lead):
         return f"[COLOR={TEAL}]{text}[/COLOR]" if lead else text
+
+    # --- data ---
 
     def _stats(self):
         if "stats" not in self._cache:
@@ -216,6 +274,12 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
     def _player_ids(self):
         data = self._stats()
         return (data.get("PlayerTeam1") or {}).get("PlayerId"), (data.get("PlayerTeam2") or {}).get("PlayerId")
+
+    def _h2h(self):
+        if "h2h" not in self._cache:
+            p1, p2 = self._player_ids()
+            self._cache["h2h"] = (self._api.head_to_head(p1, p2) if p1 and p2 else {}) or {}
+        return self._cache["h2h"]
 
     def _score_text(self):
         data = self._stats()
@@ -232,7 +296,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         score = " ".join(parts)
         status = data.get("Status")
         if status and status != "Finished":
-            return f"{score}   [COLOR={TEAL}]* LIVE[/COLOR]".strip()
+            return f"{score}   [COLOR={TEAL}]LIVE[/COLOR]".strip()
         return f"{score}   ({status})".strip() if status else score
 
     # --- poll ---
@@ -249,10 +313,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
     # --- draw / head-to-head (text) ---
 
     def _h2h_text(self):
-        if "h2h" not in self._cache:
-            p1, p2 = self._player_ids()
-            self._cache["h2h"] = self._api.head_to_head(p1, p2) if p1 and p2 else {}
-        data = self._cache["h2h"] or {}
+        data = self._h2h()
         pl, op = data.get("Player") or {}, data.get("Opponent") or {}
         if not pl or not op:
             return _.NO_MATCH_INFO
