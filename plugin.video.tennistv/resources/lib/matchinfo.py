@@ -1,3 +1,4 @@
+import contextlib
 import os
 import threading
 
@@ -136,7 +137,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         self._stop = threading.Event()
         self._cache = {"stats": stats}
         self._rows, self._stat_ctrls, self._set_map = [], [], {}
-        self._round_ids, self._rounds_built = [], False
+        self._round_ids, self._rounds_built, self._draw_ctrls = [], False, []
 
     # --- lifecycle ---
 
@@ -151,11 +152,11 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         self._sub_ind = self._mk(
             xbmcgui.ControlImage(SUB_X[SUB_STATS], 142, 120, 3, _white(), colorDiffuse=f"0x{TEAL}")
         )
-        self._score = self._stat(xbmcgui.ControlLabel(CX + 110, 190, 152, 60, "", font="font11", alignment=AL_CENTRE))
         self._spoiler = self._mk(
             xbmcgui.ControlLabel(CX, 360, CW, 60, _.SPOILER_HIDDEN, font="font10", textColor=MUTED, alignment=AL_CENTRE)
         )
         self._build_header()
+        self._build_centre()
         self._build_rows()
         self._build_set_toggle()
         self._set_section(SEC_LIVE)
@@ -217,6 +218,50 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             self._stat(
                 xbmcgui.ControlLabel(col - 6, 264, 48, 20, code, font="font10", textColor=MUTED, alignment=AL_LEFT)
             )
+
+    def _build_centre(self):
+        # The score card between the players: a FINISHED/LIVE header and the per-set scores (Option A styling).
+        self._status = self._stat(
+            xbmcgui.ControlLabel(1640, 184, 140, 22, "", font="font10", textColor=MUTED, alignment=AL_CENTRE)
+        )
+        self._setlabels = [
+            self._stat(xbmcgui.ControlLabel(1640, 208 + i * 24, 140, 22, "", font="font11", alignment=AL_CENTRE))
+            for i in range(3)
+        ]
+
+    def _render_centre(self):
+        status = self._stats().get("Status")
+        if status == "Finished":
+            self._status.setLabel("[B]FINISHED[/B]")
+        elif status:
+            self._status.setLabel(f"[B][COLOR={TEAL}]LIVE[/COLOR][/B]")
+        else:
+            self._status.setLabel("")
+        sets = self._set_scores()
+        for i, lbl in enumerate(self._setlabels):
+            if i < len(sets):
+                a, b = sets[i]
+                lc = TEAL if a > b else P1_DIM
+                rc = BLUE if b > a else P2_DIM
+                lbl.setLabel(
+                    f"[COLOR={MUTED}]SET {i + 1}[/COLOR]  "
+                    f"[COLOR={lc}]{a}[/COLOR] [COLOR={MUTED}]|[/COLOR] [COLOR={rc}]{b}[/COLOR]"
+                )
+            else:
+                lbl.setLabel("")
+
+    def _set_scores(self):
+        data = self._stats()
+        t1 = (data.get("PlayerTeam1") or {}).get("Sets") or []
+        t2 = {s.get("SetNumber"): s for s in (data.get("PlayerTeam2") or {}).get("Sets") or []}
+        out = []
+        for s in t1:
+            n = s.get("SetNumber")
+            a, b = s.get("SetScore"), t2.get(n, {}).get("SetScore")
+            if n and a is not None and b is not None:
+                with contextlib.suppress(TypeError, ValueError):
+                    out.append((int(a), int(b)))
+        return out
 
     def _build_rows(self):
         y = ROWS_Y + 40
@@ -289,7 +334,9 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         for ctrl in self._stat_ctrls:
             ctrl.setVisible(show_stats)
         self._spoiler.setVisible(stats_view and not self._revealed)
-        text_view = (live and self._sub in (SUB_INSIGHTS, SUB_H2H)) or self._section in (SEC_DRAW, SEC_KEY)
+        if self._section != SEC_DRAW:
+            self._clear_draw()
+        text_view = (live and self._sub in (SUB_INSIGHTS, SUB_H2H)) or self._section == SEC_KEY
         self.getControl(BODY_ID).setVisible(text_view)
         self._sub_ind.setVisible(live)
         self._sub_ind.setPosition(SUB_X[self._sub], 142)
@@ -305,13 +352,13 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         elif self._section == SEC_LIVE and self._sub == SUB_H2H:
             self.getControl(BODY_ID).setText(self._h2h_text())
         elif self._section == SEC_DRAW:
-            self.getControl(BODY_ID).setText(self._round_text())
+            self._render_draw()
         elif self._section == SEC_KEY:
             self.getControl(BODY_ID).setText(_.KEY_NOTE)
 
     def _render_stats(self):
         data = self._stats()
-        self._score.setLabel(self._score_text())
+        self._render_centre()
         s1 = _set_stats(data.get("PlayerTeam1") or {}, self._set_num)
         s2 = _set_stats(data.get("PlayerTeam2") or {}, self._set_num)
         half = CW // 2
@@ -403,34 +450,69 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             )
         return "\n".join(lines)
 
-    def _round_text(self):
+    def _clear_draw(self):
+        for ctrl in self._draw_ctrls:
+            self.removeControl(ctrl)
+        self._draw_ctrls = []
+
+    def _render_draw(self):
+        # The selected round's fixtures as "flag Last v flag Last  score" rows, with the winner in bold.
+        self._clear_draw()
         rounds = getattr(self, "_draw_rounds", [])
         if not rounds:
-            return _.NO_MATCH_INFO
+            return
         rnd = rounds[min(self._round_idx, len(rounds) - 1)]
-        lines = [f"[B][COLOR={TEAL}]{rnd.get('RoundName')}[/COLOR][/B]", ""]
+        head = f"[B][COLOR={TEAL}]{rnd.get('RoundName')}[/COLOR][/B]"
+        ctrls = [xbmcgui.ControlLabel(CX, 152, CW, 24, head, font="font11")]
+        y = 184
         for fx in rnd.get("Fixtures") or []:
             res = fx.get("Result") or {}
-            top = _slot(res.get("TeamTop"), fx.get("DrawLineTop"), fx.get("TopPlaceholderText"))
+            tn, tc = _slot(res.get("TeamTop"), fx.get("DrawLineTop"), fx.get("TopPlaceholderText"))
             if res.get("ResultReason") == "BYE" and not res.get("TeamBottom"):
-                bottom = "(bye)"
+                bn, bc = "(bye)", None
             else:
-                bottom = _slot(res.get("TeamBottom"), fx.get("DrawLineBottom"), fx.get("BottomPlaceholderText"))
+                bn, bc = _slot(res.get("TeamBottom"), fx.get("DrawLineBottom"), fx.get("BottomPlaceholderText"))
             if res.get("Winner") == 1:
-                top = f"[B]{top}[/B]"
+                tn = f"[B]{tn}[/B]"
             elif res.get("Winner") == 2:
-                bottom = f"[B]{bottom}[/B]"
-            lines.append(f"{top} v {bottom}  {res.get('ResultString') or ''}".rstrip())
-        return "\n".join(lines)
+                bn = f"[B]{bn}[/B]"
+            lflag, rflag = _flag(tc), _flag(bc)
+            if lflag:
+                ctrls.append(xbmcgui.ControlImage(CX, y + 3, 22, 15, lflag))
+            ctrls.append(xbmcgui.ControlLabel(CX + 26, y, 118, 22, tn, font="font10", textColor=WHITE))
+            ctrls.append(
+                xbmcgui.ControlLabel(CX + 146, y, 14, 22, "v", font="font10", textColor=MUTED, alignment=AL_CENTRE)
+            )
+            if rflag:
+                ctrls.append(xbmcgui.ControlImage(CX + 162, y + 3, 22, 15, rflag))
+            ctrls.append(xbmcgui.ControlLabel(CX + 188, y, 116, 22, bn, font="font10", textColor=WHITE))
+            ctrls.append(
+                xbmcgui.ControlLabel(
+                    CX + 304,
+                    y,
+                    68,
+                    22,
+                    res.get("ResultString") or "",
+                    font="font10",
+                    textColor=MUTED,
+                    alignment=AL_RIGHT,
+                )
+            )
+            y += 26
+        for ctrl in ctrls:
+            self.addControl(ctrl)
+        self._draw_ctrls = ctrls
 
 
 def _slot(team, drawline, placeholder):
+    # Returns (surname, three-letter nationality) for a draw slot.
     if team and team.get("Player"):
-        return team["Player"].get("LastName") or ""
+        p = team["Player"]
+        return (p.get("LastName") or ""), p.get("Nationality")
     players = (drawline or {}).get("Players") or []
     if players:
-        return players[0].get("LastName") or ""
-    return placeholder or "?"
+        return (players[0].get("LastName") or ""), players[0].get("Nationality")
+    return (placeholder or "?"), None
 
 
 def _short_round(name):
