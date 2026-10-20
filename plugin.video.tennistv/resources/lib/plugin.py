@@ -5,9 +5,11 @@ import xbmc
 import xbmcgui
 from slyguy import gui, inputstream, plugin, signals, userdata
 from slyguy.constants import ADDON_PATH, PLAY_FROM_ASK, PLAY_FROM_LIVE, PLAY_FROM_START
+from slyguy.log import log
 
+from . import timeline
 from .api import API
-from .constants import CATEGORIES, EARLIEST_YEAR, USER_AGENT
+from .constants import CATEGORIES, DAY, EARLIEST_YEAR, USER_AGENT
 from .language import _
 from .settings import settings
 
@@ -200,16 +202,16 @@ def _search_item(data):
 
 @plugin.route()
 @plugin.login_required()
-def play(media_guid=None, video_id=None, match=None, match_title=None, **kwargs):
+def play(media_guid=None, video_id=None, match=None, **kwargs):
     # Search results carry a numeric video_id; catalogue items carry a mediaGuid directly.
     if not media_guid and video_id:
         content = api.content_by_id(video_id)
         media_guid = content.get("mediaGuid")
         if not match:
-            match, match_title = _match_ref(content)
+            match = _match_ref(content)
 
     # Make the match this video belongs to available to the Match Info overlay (empty for non-match videos).
-    _set_match_context(match, match_title)
+    _set_match_context(match)
 
     # Match feeds and alternate angles are live events that can be joined live, watched from the start, or resumed;
     # the live play action setting decides, or asks. The ask prompt comes before the playback calls so a cancel
@@ -221,8 +223,15 @@ def play(media_guid=None, video_id=None, match=None, match_title=None, **kwargs)
 
     media = api.play(media_guid)["media"]
     is_dash = bool(media.get("dash"))
+    # The overlay reads the HLS program date-times to follow the video (the DASH of a highlight has the same timing).
+    xbmcgui.Window(10000).setProperty("tennistv.hls", _timing_playlist(media.get("hls")) if match else "")
 
     callback = None
+    if match and not seekable:
+        # SlyGuy's player runs an "interval" callback as soon as playback starts: it fetches what the Match Info
+        # overlay needs into the shared cache, so the overlay opens (and follows a seek) without waiting. A live
+        # feed's callback saves its resume point instead, and its live data is fetched when the overlay opens.
+        callback = {"type": "interval", "interval": DAY, "callback": plugin.url_for(prefetch, match=match)}
     if seekable:
         # Remember the position so the event can be resumed if it is stopped and reopened
         callback = {
@@ -335,7 +344,7 @@ def _parse_item(item):
     if item.get("date"):
         info["aired"] = item["date"][:10]
 
-    match, match_title = _match_ref(item)
+    match = _match_ref(item)
 
     return plugin.Item(
         label=item.get("title"),
@@ -346,45 +355,72 @@ def _parse_item(item):
             play,
             media_guid=media_guid,
             match=match,
-            match_title=match_title,
             _is_live=is_live,
             seekable=1 if seekable else None,
         ),
     )
 
 
+def _timing_playlist(hls):
+    # The master playlist's token expires within a minute of playback starting, but the variant it points to carries
+    # a session token that lasts about a day, so resolve the variant now for the overlay to read later.
+    if not hls:
+        return ""
+    try:
+        return timeline.variant_url(api.playlist(hls), hls) or hls
+    except Exception:  # playback does not depend on it; the overlay then falls back to its unsynced view
+        return hls
+
+
 def _match_ref(item):
-    # A match video's references carry ATP_MATCH:<tid>_<year>_<matchId>; its metadata carries the "A vs B" title.
+    # A match video's references carry ATP_MATCH:<tid>_<year>_<matchId>. A live court feed only knows its tournament
+    # and court, so it gets "court:<tid>_<year>:<court>", resolved to the match on that court when the overlay opens
+    # (the match changes through the day).
     refs = item.get("references") or []
     match = next((r.get("sid") for r in refs if r.get("type") == "ATP_MATCH" and r.get("sid")), None)
-    if not match:
-        return None, None
-    return match, (item.get("metadata") or {}).get("displayTitle")
+    if match:
+        return match
+    tournament = next((r.get("sid") for r in refs if r.get("type") == "ATP_TOURNAMENT" and r.get("sid")), None)
+    court = str((item.get("metadata") or {}).get("court") or "")
+    return f"court:{tournament}:{court}" if tournament and court.isdigit() else None
 
 
-def _set_match_context(match, title):
+def _set_match_context(match):
     # Stash the playing match on the home window so the Match Info overlay (a separate invocation) can read it.
     win = xbmcgui.Window(10000)
     if match:
         win.setProperty("tennistv.match", match)
-        win.setProperty("tennistv.match_title", title or "")
     else:
         win.clearProperty("tennistv.match")
-        win.clearProperty("tennistv.match_title")
+
+
+@plugin.route()
+def prefetch(match=None, **kwargs):
+    # Playback callback (start, and stop): warm the cache for the Match Info overlay.
+    from .matchinfo import prefetch as warm
+
+    warm(api, match, xbmcgui.Window(10000).getProperty("tennistv.hls"))
 
 
 @plugin.route()
 def match_info(**kwargs):
-    # Opened by the bundled keymap while a match is playing; shows the live stats, draw and head-to-head overlay.
+    # Opened by the user's Match Info key while a match is playing: the live stats, draw and key moments overlay.
     win = xbmcgui.Window(10000)
-    match = win.getProperty("tennistv.match")
-    if not match or not xbmc.Player().isPlaying():
+    match = win.getProperty("tennistv.match") if xbmc.Player().isPlaying() else ""
+    if match.startswith("court:"):
+        tid_year, court = match[len("court:") :].rsplit(":", 1)
+        try:
+            match = api.live_match(*tid_year.split("_", 1), court)
+        except Exception as e:  # no lookup, no overlay: say so rather than raise an error dialog
+            log.debug(f"Match Info: live match lookup failed ({e})")
+            match = None
+    if not match:
         gui.notification(_.NO_MATCH_INFO)
         return
 
     from .matchinfo import MatchInfo
 
-    MatchInfo.show(api, match, win.getProperty("tennistv.match_title"))
+    MatchInfo.show(api, match, win.getProperty("tennistv.hls"))
 
 
 @plugin.route()

@@ -1,9 +1,10 @@
 import base64
 import json
 import re
+import uuid
 from time import time
 
-from slyguy import mem_cache, userdata
+from slyguy import cache, mem_cache, userdata
 from slyguy.exceptions import Error
 from slyguy.log import log
 from slyguy.session import Session
@@ -14,6 +15,7 @@ from .constants import (
     BUNDLE_RE,
     CLIENT_ID,
     CONTENT_URL,
+    DAY,
     DEVICE_GRANT,
     DEVICE_URL,
     DRAW_URL,
@@ -21,14 +23,19 @@ from .constants import (
     H2H_URL,
     HEADERS,
     LANG,
+    LIVE_MATCHES_URL,
     LOGOUT_URL,
     MATCH_STATS_URL,
     PAGE_SIZE,
+    PLAYANYWHERE_APP,
+    PLAYANYWHERE_CLIPS_URL,
+    PLAYANYWHERE_TOKEN_URL,
     PLAYBACK_API,
     PLAYERS_URL,
     SEARCH_URL,
     SITE_URL,
     STREAMAMG_API_KEY,
+    TIMELINE_URL,
     TOKEN_URL,
     TOURNAMENTS_URL,
     WATCHLIST_URL,
@@ -171,22 +178,103 @@ class API:
         data = self._session.get(SEARCH_URL, params=params, headers={"account": ACCOUNT}).json()
         return [hit["data"] for hit in data.get("hits", []) if hit.get("contentType") == "VIDEO"]
 
-    @mem_cache.cached(60 * 60)
+    def _stored(self, key, fetch, ttl):
+        # The Match Info data goes through SlyGuy's persistent cache, which every run of the add-on shares: each
+        # overlay open is a new run, and the prefetch at playback start fills it so the overlay opens (and follows a
+        # seek) without waiting. ttl(value) gives how long to keep a value: a day for a finished match's (it never
+        # changes), briefly or not at all (0) for a live one. With SlyGuy's cache setting off, everything is fetched.
+        value = cache.get(key)
+        if value is None:
+            value = fetch()
+            expires = ttl(value)
+            if expires:
+                cache.set(key, value, expires=expires)
+        return value
+
     def draw(self, tid, year):
         # The tournament bracket by event (MS/doubles), keyed by tournament id + year from a match's ATP_MATCH ref.
-        return self._session.get(DRAW_URL.format(tid=tid, year=year), headers={"account": ACCOUNT}).json()
+        return self._stored(
+            f"tennistv.draw.{tid}.{year}",
+            lambda: self._session.get(DRAW_URL.format(tid=tid, year=year), headers={"account": ACCOUNT}).json(),
+            lambda _draw: 60 * 10,
+        )
 
-    @mem_cache.cached(60 * 60 * 24)
     def head_to_head(self, p1, p2):
         # Career head-to-head between two ATP player sids, plus each player's bio.
-        return self._session.get(H2H_URL.format(p1=p1, p2=p2), headers={"account": ACCOUNT}).json()
+        return self._stored(
+            f"tennistv.h2h.{p1}.{p2}",
+            lambda: self._session.get(H2H_URL.format(p1=p1, p2=p2), headers={"account": ACCOUNT}).json(),
+            lambda _h2h: DAY,
+        )
 
-    @mem_cache.cached(10)
+    def live_match(self, tid, year, court):
+        # The match in progress on a tournament's court, as "<tid>_<year>_<matchId>" (None when nothing is on).
+        data = self._session.get(LIVE_MATCHES_URL, headers={"account": ACCOUNT}).json()
+        for m in data.get("matches") or []:
+            if (str(m.get("TournamentId")), str(m.get("TournamentYear")), str(m.get("CourtId"))) == (tid, year, court):
+                return f"{tid}_{year}_{m.get('MatchId')}"
+        return None
+
+    def timeline(self, tid, year, match_id):
+        # The match's Ease Live events, oldest first. A live match's are not stored, so each poll gets the latest.
+        def fetch():
+            program = TIMELINE_URL.format(tid=tid, year=year, match_id=match_id)
+            last = self._session.get(f"{program}/lastUpdate").text.strip()
+            events = self._session.get(f"{program}/events", params={"to": last}).json()
+            return sorted(events, key=lambda e: e.get("timestamp", 0)) if isinstance(events, list) else []
+
+        def ttl(events):
+            finished = any(
+                (e.get("metadata") or {}).get("isFinished") for e in events if e.get("event") == "MatchStatus#show"
+            )
+            return DAY if finished else 0
+
+        return self._stored(f"tennistv.timeline.{tid}.{year}.{match_id}", fetch, ttl)
+
+    def _playanywhere_token(self):
+        return self._stored("tennistv.playanywhere.token", self._new_playanywhere_token, lambda _token: DAY)
+
+    def _new_playanywhere_token(self):
+        # An anonymous PlayAnywhere session for this install (the web overlay does the same for every viewer).
+        user = userdata.get("playanywhere_user")
+        if not user:
+            user = str(uuid.uuid4())
+            userdata.set("playanywhere_user", user)
+        body = {"app_code": PLAYANYWHERE_APP, "lang_code": "en", "username": user}
+        return self._session.post(PLAYANYWHERE_TOKEN_URL, json=body).json().get("access_token")
+
+    def key_moments(self, event_id):
+        # The match's Key Moments clips (title, set and game, clock time, thumbnail), as the web overlay lists them.
+        def fetch():
+            token = self._playanywhere_token()
+            url = PLAYANYWHERE_CLIPS_URL.format(event_id=event_id)
+            clips = self._session.get(url, headers={"Authorization": f"Bearer {token}"}).json()
+            return clips if isinstance(clips, list) else []
+
+        def ttl(clips):
+            return DAY if any(c.get("rt_event") == "Match End" for c in clips) else 30
+
+        return self._stored(f"tennistv.moments.{event_id}", fetch, ttl)
+
+    def playlist(self, url):
+        # An HLS playlist as text (the stream tokens are bound to the user-agent, which the session sends). A VOD
+        # playlist is complete and never changes; a live window moves, so it is not stored (the overlay dates it).
+        return self._stored(
+            f"tennistv.playlist.{url}",
+            lambda: self._session.get(url).text,
+            lambda text: DAY if "#EXT-X-ENDLIST" in text else 0,
+        )
+
     def match_stats(self, tid, year, match_id):
-        # Live or final match statistics (serve, return, points) per set and for the whole match. Cached only
-        # briefly so a live match stays fresh when the overlay polls it (the web polls live data every 15s).
-        url = MATCH_STATS_URL.format(tid=tid, year=year, match_id=match_id)
-        return self._session.get(url, headers={"account": ACCOUNT}).json()
+        # Live or final match statistics (serve, return, points) per set and for the whole match. A live match's are
+        # cached only briefly so the overlay's poll stays fresh (the web polls live data every 15s).
+        return self._stored(
+            f"tennistv.stats.{tid}.{year}.{match_id}",
+            lambda: self._session.get(
+                MATCH_STATS_URL.format(tid=tid, year=year, match_id=match_id), headers={"account": ACCOUNT}
+            ).json(),
+            lambda stats: DAY if stats.get("Status") == "Finished" else 10,
+        )
 
     def _streamamg_key(self, refresh=False):
         # The X-Api-Key is a public client constant published in the site's JS bundle. It is cached, falls back to

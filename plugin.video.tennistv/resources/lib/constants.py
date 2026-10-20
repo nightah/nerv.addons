@@ -47,6 +47,20 @@ WATCHLIST_URL = "https://api.tennistv.com/favoritemedia"
 MATCH_STATS_URL = "https://api.tennistv.com/tennis/v1/tournaments/{tid}/{year}/matches/{match_id}/stats"
 DRAW_URL = "https://api.tennistv.com/tennis/v1/tournaments/{tid}/{year}/draws"
 H2H_URL = "https://api.tennistv.com/tennis/v1/players/{p1}/headtohead/{p2}"
+DAY = 60 * 60 * 24  # how long a finished match's data is kept: it never changes
+# A live court feed has no ATP_MATCH reference, only its tournament and court; the matches in progress (with their
+# CourtId) say which match is on that court now.
+LIVE_MATCHES_URL = "https://api.tennistv.com/tennis/v1/matches?status=L"
+# The web player's live panel (Ease Live): a public, time-stamped event timeline per match (score, point by point,
+# serve, stats, insights, momentum), which the overlay replays in step with the video. See timeline.py.
+# The bare /events URL can be a stale CDN copy (one cached mid-match was still served the next day), so, like the
+# web overlay, ask for the program's last update first and request /events?to=<it>: a new URL whenever it changes.
+TIMELINE_URL = "https://atptennis-cdn.cloud.easelive.tv/api/v1/programs/ATP-{year}-{tid}-{match_id}"
+# Key Moments are PlayAnywhere video clips (in the same overlay): an anonymous token for the Tennis TV web app code,
+# then the clips of the PlayAnywhere event that the timeline names.
+PLAYANYWHERE_TOKEN_URL = "https://gwpa.prod.playanywhere.com/ws/api/v1/token"
+PLAYANYWHERE_CLIPS_URL = "https://gwpa.prod.playanywhere.com/ws/api/v1/video/{event_id}"
+PLAYANYWHERE_APP = "PA-TENNISTV-WEB"
 
 # Playback: a per-video entitlement token, then the StreamAMG entry endpoint returns the manifest URL.
 ENTITLEMENT_URL = "https://api.tennistv.com/entitlementcheck/v1/videoentitlements/{guid}"

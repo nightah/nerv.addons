@@ -1,5 +1,6 @@
 import contextlib
 import os
+import re
 
 import xbmc
 import xbmcgui
@@ -44,6 +45,18 @@ class _Capture(xbmcgui.WindowXMLDialog):
 
 def is_bound():
     return xbmcvfs.exists(KEYMAP_PATH)
+
+
+def bound_code():
+    # The bound key's code, read back from the keymap (works for bindings made before it was needed). While the
+    # overlay is open Kodi gives it that key as an action instead of running the binding, so it can close itself.
+    if not is_bound():
+        return None
+    with contextlib.suppress(OSError, ValueError):
+        with open(xbmcvfs.translatePath(KEYMAP_PATH), encoding="utf-8") as f:
+            match = re.search(r'<key id="(\d+)"', f.read())
+        return int(match.group(1)) if match else None
+    return None
 
 
 def _capture_code():
