@@ -32,6 +32,12 @@ class Language(BaseLanguage):
     SPOILER_HIDDEN = 30027
     STATS_MATCH = 30028
     STATS_SET = 30029
+    SEC_LIVE_STATS = 30030
+    SEC_KEY = 30031
+    SUB_INSIGHTS = 30032
+    SUB_H2H = 30033
+    INSIGHTS_NOTE = 30034
+    KEY_NOTE = 30035
 
 
 _ = Language()

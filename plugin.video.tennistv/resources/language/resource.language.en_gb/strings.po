@@ -120,3 +120,27 @@ msgstr ""
 msgctxt "#30029"
 msgid "Set {n}"
 msgstr ""
+
+msgctxt "#30030"
+msgid "Live Stats"
+msgstr ""
+
+msgctxt "#30031"
+msgid "Key Moments"
+msgstr ""
+
+msgctxt "#30032"
+msgid "Insights"
+msgstr ""
+
+msgctxt "#30033"
+msgid "H2H"
+msgstr ""
+
+msgctxt "#30034"
+msgid "Match insights are shown on the Tennis TV web player and are not available to the add-on yet."
+msgstr ""
+
+msgctxt "#30035"
+msgid "Key moments are produced during a live broadcast, so they are not available on a replay."
+msgstr ""
