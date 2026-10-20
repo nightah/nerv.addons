@@ -18,10 +18,11 @@ players to vendor is every entrant in this and last season's tournament draws, k
      resources/media/players/<sid>.png. Existing files not in the bundle (eg. legends) are kept.
 
   3) python3 vendor.py --flags
-     Fetches the Tennis TV site's flag SVGs for the roster's nationalities and rasterises them to
-     resources/media/flags/<code>.png with rsvg-convert (Kodi has no SVG support).
+     Fetches a rectangular 4:3 PNG flag (flagcdn.com, public-domain Flagpedia artwork) for each of the
+     roster's nationalities and writes it to resources/media/flags/<code>.png, keyed by the ATP's IOC code.
+     (The Tennis TV site's own flags are circle-cropped, which the overlay does not want.)
 
-Requires: sips (macOS) and pngquant (brew install pngquant) for headshots, rsvg-convert for flags.
+Requires: sips (macOS) and pngquant (brew install pngquant) for headshots.
 """
 
 import argparse
@@ -36,7 +37,100 @@ HERE = os.path.dirname(__file__)
 PLAYERS_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "plugin.video.tennistv/resources/media/players"))
 FLAGS_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "plugin.video.tennistv/resources/media/flags"))
 API = "https://api.tennistv.com/tennis/v1"
-FLAG_SVG = "https://www.tennistv.com/resources/v4.7.7/i/elements/flags/{code}.svg"
+FLAG_PNG = "https://flagcdn.com/48x36/{iso}.png"
+# ATP nationalities are IOC codes; flagcdn is keyed by ISO 3166-1 alpha-2.
+IOC_ISO = {
+    "alg": "dz",
+    "and": "ad",
+    "ant": "ag",
+    "arg": "ar",
+    "arm": "am",
+    "aus": "au",
+    "aut": "at",
+    "aze": "az",
+    "bah": "bs",
+    "bar": "bb",
+    "bel": "be",
+    "bih": "ba",
+    "bol": "bo",
+    "bra": "br",
+    "bul": "bg",
+    "can": "ca",
+    "chi": "cl",
+    "chn": "cn",
+    "col": "co",
+    "crc": "cr",
+    "cro": "hr",
+    "cyp": "cy",
+    "cze": "cz",
+    "den": "dk",
+    "dom": "do",
+    "ecu": "ec",
+    "egy": "eg",
+    "esa": "sv",
+    "esp": "es",
+    "est": "ee",
+    "fin": "fi",
+    "fra": "fr",
+    "gbr": "gb",
+    "geo": "ge",
+    "ger": "de",
+    "gre": "gr",
+    "gua": "gt",
+    "hkg": "hk",
+    "hun": "hu",
+    "ina": "id",
+    "ind": "in",
+    "irl": "ie",
+    "isr": "il",
+    "ita": "it",
+    "jam": "jm",
+    "jor": "jo",
+    "jpn": "jp",
+    "kaz": "kz",
+    "kor": "kr",
+    "lat": "lv",
+    "lbn": "lb",
+    "lie": "li",
+    "ltu": "lt",
+    "lux": "lu",
+    "mar": "ma",
+    "mda": "md",
+    "mex": "mx",
+    "mkd": "mk",
+    "mlt": "mt",
+    "mon": "mc",
+    "mne": "me",
+    "ned": "nl",
+    "nor": "no",
+    "nzl": "nz",
+    "pak": "pk",
+    "par": "py",
+    "per": "pe",
+    "phi": "ph",
+    "pol": "pl",
+    "por": "pt",
+    "pur": "pr",
+    "qat": "qa",
+    "rou": "ro",
+    "rsa": "za",
+    "slo": "si",
+    "srb": "rs",
+    "sui": "ch",
+    "svk": "sk",
+    "swe": "se",
+    "tha": "th",
+    "tpe": "tw",
+    "tun": "tn",
+    "tur": "tr",
+    "ukr": "ua",
+    "uru": "uy",
+    "usa": "us",
+    "uzb": "uz",
+    "ven": "ve",
+    "vie": "vn",
+    "zim": "zw",
+}
 SEASONS = 2  # this season and last
 DIM, COLORS = 160, 64
 
@@ -143,20 +237,15 @@ def _flags():
     os.makedirs(FLAGS_DIR, exist_ok=True)
     codes = sorted({c.lower() for c in _roster().values() if c})
     ok, missing = 0, []
-    with tempfile.TemporaryDirectory() as tmp:
-        for code in codes:
-            svg = os.path.join(tmp, f"{code}.svg")
-            got = subprocess.run(
-                ["curl", "-sf", "--max-time", "15", FLAG_SVG.format(code=code), "-H", "User-Agent: Mozilla/5.0"],
-                capture_output=True,
-            )
-            if got.returncode or b"svg" not in got.stdout[:40].lower():
-                missing.append(code)
-                continue
-            with open(svg, "wb") as f:
-                f.write(got.stdout)
-            r = subprocess.run(["rsvg-convert", "-h", "30", svg, "-o", f"{FLAGS_DIR}/{code}.png"])
-            ok += 1 if not r.returncode else missing.append(code)
+    for code in codes:
+        iso = IOC_ISO.get(code)
+        got = subprocess.run(["curl", "-sf", "--max-time", "15", FLAG_PNG.format(iso=iso)], capture_output=True)
+        if not iso or got.returncode or not got.stdout.startswith(b"\x89PNG"):
+            missing.append(code)
+            continue
+        with open(f"{FLAGS_DIR}/{code}.png", "wb") as f:
+            f.write(got.stdout)
+        ok += 1
     print(f"vendored {ok} flags -> {FLAGS_DIR}; no flag for: {' '.join(missing)}")
 
 

@@ -4,8 +4,9 @@ extend-exclude = ["LICENSE", "LICENSE.txt", "**/resources/skins/**"]
 
 [default]
 locale = "en-au"
-# HTML attribute values are US spelling.
-extend-ignore-re = ['align="center"']
+# HTML attribute values are US spelling; IOC to ISO country code tables ("ned": "nl") are codes, not words; and
+# typos splits the plural "PNGs" into a misspelling.
+extend-ignore-re = ['align="center"', '"[a-z]{3}": "[a-z]{2}"', 'PNGs']
 
 [default.extend-words]
 # Australian spelling of the noun; typos can't tell it from the verb "license".

@@ -2,7 +2,7 @@
 
 The Match Info overlay shows a headshot and a country flag per player. Both are vendored, keyed by the ATP player sid and the three-letter country code the API returns.
 
-Headshots come from `atptour.com`, which gates on a Cloudflare TLS-fingerprint challenge that no plain HTTP client (curl, Kodi's image loader) can pass, so only a real browser can fetch them. The roster to vendor is every entrant in this and last season's tournament draws. Flags come from the Tennis TV site's own SVGs and are rasterised to PNG, since Kodi has no SVG support.
+Headshots come from `atptour.com`, which gates on a Cloudflare TLS-fingerprint challenge that no plain HTTP client (curl, Kodi's image loader) can pass, so only a real browser can fetch them. The roster to vendor is every entrant in this and last season's tournament draws. Flags are rectangular 4:3 PNGs from flagcdn.com (public-domain Flagpedia artwork), mapped from the ATP's IOC codes to ISO codes; the Tennis TV site's own flags are circle-cropped, which the overlay does not use.
 
 ## Re-vendor headshots
 
@@ -33,9 +33,8 @@ Headshots come from `atptour.com`, which gates on a Cloudflare TLS-fingerprint c
 python3 tools/tennistv-headshots/vendor.py --flags
 ```
 
-Fetches the site's flag SVG for each roster nationality and rasterises it to `resources/media/flags/<code>.png`. Countries with no flag on the site (such as neutral RUS and BLR) are skipped.
+Fetches a 48x36 flag PNG for each roster nationality and writes it to `resources/media/flags/<code>.png`. Neutral athletes (RUS, BLR) have no flag and are skipped; a new nationality needs an entry in `IOC_ISO`.
 
 ## Requirements
 
 - `sips` (macOS) and `pngquant` (`brew install pngquant`) for headshots
-- `rsvg-convert` (`brew install librsvg`) for flags
