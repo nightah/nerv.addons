@@ -16,8 +16,11 @@ TAB_X = {TAB_STATS: 1456, TAB_DRAW: 1604, TAB_H2H: 1752}
 
 POLL_SECONDS = 15  # the web polls live match data every 15s; a replay fetches once and stops
 
-# Web palette: dark navy panel, teal accent, muted labels.
+# Web palette: dark navy panel, per-player accents (left teal, right blue), muted labels.
 TEAL = "FF2FB8AC"
+BLUE = "FF4F9BE8"
+P1_DIM = "802FB8AC"
+P2_DIM = "804F9BE8"
 WHITE = "FFE6EAF0"
 MUTED = "FF8A93A0"
 CARD = "14FFFFFF"
@@ -27,7 +30,6 @@ CX, CW = 1456, 438
 LVAL_X, LVAL_W = 1456, 84
 NAME_X, NAME_W = 1544, 262
 RVAL_X, RVAL_W = 1810, 84
-BAR_GAP = 96
 SERVICE_Y = 258
 AL_LEFT, AL_RIGHT, AL_CENTRE = 4, 5, 6
 
@@ -72,6 +74,14 @@ def _numeric(stat):
     if "Number" in stat:
         return float(stat.get("Number") or 0)
     return 0.0
+
+
+def _fills(g1, g2, n1, n2):
+    # Percentage stats fill to a 100% ceiling of each player's own value; counts are compared between the two.
+    if (isinstance(g1, dict) and "Percent" in g1) or (isinstance(g2, dict) and "Percent" in g2):
+        return min(n1 / 100, 1.0), min(n2 / 100, 1.0)
+    total = n1 + n2
+    return (n1 / total, n2 / total) if total else (0.0, 0.0)
 
 
 def _set_stats(team, set_num):
@@ -175,11 +185,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         y = SERVICE_Y
         for heading, group, rows in SECTIONS:
             self._add(xbmcgui.ControlImage(CX, y, CW, 26, _white(), colorDiffuse=f"0x{CARD}"))
-            self._add(
-                xbmcgui.ControlLabel(
-                    CX + 10, y, CW - 20, 26, heading, font="font10", textColor=MUTED, alignment=AL_LEFT
-                )
-            )
+            self._add(xbmcgui.ControlLabel(CX, y, CW, 26, heading, font="font10", textColor=MUTED, alignment=AL_CENTRE))
             y += 34
             for label, key in rows:
                 lval = self._add(xbmcgui.ControlLabel(LVAL_X, y, LVAL_W, 22, "", font="font10", alignment=AL_RIGHT))
@@ -190,7 +196,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
                 )
                 rval = self._add(xbmcgui.ControlLabel(RVAL_X, y, RVAL_W, 22, "", font="font10", alignment=AL_LEFT))
                 lbar = self._add(xbmcgui.ControlImage(CX, y + 24, 1, 4, _white(), colorDiffuse=f"0x{TEAL}"))
-                rbar = self._add(xbmcgui.ControlImage(CX + CW, y + 24, 1, 4, _white(), colorDiffuse=f"0x{TEAL}"))
+                rbar = self._add(xbmcgui.ControlImage(CX, y + 24, 1, 4, _white(), colorDiffuse=f"0x{BLUE}"))
                 self._rows.append({"group": group, "key": key, "lval": lval, "rval": rval, "lbar": lbar, "rbar": rbar})
                 y += 38
             y += 10
@@ -246,23 +252,24 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         data = self._stats()
         s1 = _set_stats(data.get("PlayerTeam1") or {}, self._set_num)
         s2 = _set_stats(data.get("PlayerTeam2") or {}, self._set_num)
-        avail = CW - BAR_GAP
+        half = CW // 2
+        centre = CX + half
         for row in self._rows:
             g1 = (s1.get(row["group"]) or {}).get(row["key"])
             g2 = (s2.get(row["group"]) or {}).get(row["key"])
             n1, n2 = _numeric(g1), _numeric(g2)
-            row["lval"].setLabel(self._lead(_value(g1, row["key"]), n1 >= n2 and (n1 or n2)))
-            row["rval"].setLabel(self._lead(_value(g2, row["key"]), n2 >= n1 and (n1 or n2)))
-            total = n1 + n2
-            lw = max(int(avail * n1 / total) if total else 0, 1)
-            rw = max(int(avail * n2 / total) if total else 0, 1)
+            lead1 = n1 >= n2 and (n1 or n2)
+            lead2 = n2 >= n1 and (n1 or n2)
+            row["lval"].setLabel(f"[COLOR={TEAL if lead1 else P1_DIM}]{_value(g1, row['key'])}[/COLOR]")
+            row["rval"].setLabel(f"[COLOR={BLUE if lead2 else P2_DIM}]{_value(g2, row['key'])}[/COLOR]")
+            lf, rf = _fills(g1, g2, n1, n2)
+            # Both bars meet at the centre and grow outward, left teal and right blue.
+            lw, rw = max(int(lf * half), 1), max(int(rf * half), 1)
+            y = row["lbar"].getPosition()[1]
             row["lbar"].setWidth(lw)
+            row["lbar"].setPosition(centre - lw, y)
             row["rbar"].setWidth(rw)
-            row["rbar"].setPosition(CX + CW - rw, row["rbar"].getPosition()[1])
-
-    @staticmethod
-    def _lead(text, lead):
-        return f"[COLOR={TEAL}]{text}[/COLOR]" if lead else text
+            row["rbar"].setPosition(centre, y)
 
     # --- data ---
 
