@@ -172,9 +172,10 @@ def insights(state, games, team_a_is_p1=True):
             ]
         )
 
+    # Shot quality per stroke, in the order the overlay lists them.
     shots = [
-        (label, *pair(side("shot_quality", "p1").get(key), side("shot_quality", "p2").get(key)))
-        for label, key in (("Serve", "serve"), ("Return", "return"), ("Forehand", "forehand"), ("Backhand", "backhand"))
+        (key, *pair(side("shot_quality", "p1").get(key), side("shot_quality", "p2").get(key)))
+        for key in ("serve", "return", "forehand", "backhand")
     ]
     power = (live.get("balance_of_power") or {}).get("match") or {}
     p1, p2 = pair(power.get("p1"), power.get("p2"))

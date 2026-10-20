@@ -113,34 +113,34 @@ FX_PAGE = (PANEL_BOTTOM - FX_Y) // FX_STEP
 FX_SETS, FX_COL = 3, 20  # FX_COL: one digit plus a figure space (Noto's digits are all one width)
 FIGURE_SPACE, FIGURE_DASH = "\u2007", "\u2012"  # digit-wide space and dash, so the games columns line up
 FX_NAME_W = CW - 20 - FX_SETS * FX_COL - 8
-BYE = "BYE"
+BYE = "BYE"  # the draw's marker for a bye (shown as _.DRAW_BYE)
 PAGE_NEXT = {xbmcgui.ACTION_MOVE_DOWN, xbmcgui.ACTION_PAGE_DOWN, xbmcgui.ACTION_MOUSE_WHEEL_DOWN}
 PAGE_PREV = {xbmcgui.ACTION_PAGE_UP, xbmcgui.ACTION_MOUSE_WHEEL_UP}
 
 SERVICE_ROWS = (
-    ("Aces", "Aces"),
-    ("Double Faults", "DoubleFaults"),
-    ("First Serve In", "FirstServe"),
-    ("First Serve Points Won", "FirstServePointsWon"),
-    ("Second Serve Points Won", "SecondServePointsWon"),
-    ("Break Points Saved", "BreakPointsSaved"),
-    ("Service Games Played", "ServiceGamesPlayed"),
+    (_.STAT_ACES, "Aces"),
+    (_.STAT_DOUBLE_FAULTS, "DoubleFaults"),
+    (_.STAT_FIRST_SERVE, "FirstServe"),
+    (_.STAT_FIRST_SERVE_WON, "FirstServePointsWon"),
+    (_.STAT_SECOND_SERVE_WON, "SecondServePointsWon"),
+    (_.STAT_BREAK_SAVED, "BreakPointsSaved"),
+    (_.STAT_SERVICE_GAMES, "ServiceGamesPlayed"),
 )
 RETURN_ROWS = (
-    ("First Return Points Won", "FirstServeReturnPointsWon"),
-    ("Second Return Points Won", "SecondServeReturnPointsWon"),
-    ("Break Points Converted", "BreakPointsConverted"),
-    ("Return Games Played", "ReturnGamesPlayed"),
+    (_.STAT_FIRST_RETURN_WON, "FirstServeReturnPointsWon"),
+    (_.STAT_SECOND_RETURN_WON, "SecondServeReturnPointsWon"),
+    (_.STAT_BREAK_CONVERTED, "BreakPointsConverted"),
+    (_.STAT_RETURN_GAMES, "ReturnGamesPlayed"),
 )
 POINT_ROWS = (
-    ("Service Points Won", "TotalServicePointsWon"),
-    ("Return Points Won", "TotalReturnPointsWon"),
-    ("Total Points Won", "TotalPointsWon"),
+    (_.STAT_SERVICE_POINTS, "TotalServicePointsWon"),
+    (_.STAT_RETURN_POINTS, "TotalReturnPointsWon"),
+    (_.STAT_TOTAL_POINTS, "TotalPointsWon"),
 )
 GROUPS = (
-    ("SERVICE", "ServiceStats", SERVICE_ROWS),
-    ("RETURN", "ReturnStats", RETURN_ROWS),
-    ("POINTS", "PointStats", POINT_ROWS),
+    (_.STAT_SERVICE, "ServiceStats", SERVICE_ROWS),
+    (_.STAT_RETURN, "ReturnStats", RETURN_ROWS),
+    (_.STAT_POINTS, "PointStats", POINT_ROWS),
 )
 RATIO_KEYS = {"BreakPointsSaved", "BreakPointsConverted"}
 
@@ -1193,18 +1193,18 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
     def _build_insights(self):
         self._ins_built = True
         g = self._ins
-        y = self._heading(g, SET_Y, "MOMENTUM")
+        y = self._heading(g, SET_Y, _.INS_MOMENTUM)
         self._ins_now = self._split(y, SPLIT_H, FONT_S)
-        y = self._heading(g, y + SPLIT_H + 10, "PREVIOUS GAMES")
+        y = self._heading(g, y + SPLIT_H + 10, _.INS_PREVIOUS_GAMES)
         self._ins_games = []
         for _i in range(INS_GAMES):
             label = g(xbmcgui.ControlLabel(CX, y, 56, GAME_H, "", font=FONT_XS, textColor=MUTED, alignment=AL_LEFT))
             self._ins_games.append((label, self._split(y, GAME_H, FONT_XS, x=CX + 60, w=CW - 60)))
             y += GAME_STEP
-        y = self._heading(g, y + 6, "ATTACK AND DEFENCE")
+        y = self._heading(g, y + 6, _.INS_ATTACK_DEFENCE)
         # Conversion and steal: the % on top, the points won of those played underneath, then the bar.
         self._ins_ad = []
-        for label, hint in (("Conversion", "won when attacking"), ("Steal", "won when defending")):
+        for label, hint in ((_.INS_CONVERSION, _.INS_CONVERSION_HINT), (_.INS_STEAL, _.INS_STEAL_HINT)):
             row = self._bar_row(g, y, label, bar_y=46)
             row["lhint"] = g(xbmcgui.ControlLabel(LVAL_X, y + 22, LVAL_W, 20, "", font=FONT_XS, alignment=AL_RIGHT))
             g(
@@ -1215,18 +1215,18 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             row["rhint"] = g(xbmcgui.ControlLabel(RVAL_X, y + 22, RVAL_W, 20, "", font=FONT_XS, alignment=AL_LEFT))
             self._ins_ad.append(row)
             y += 58
-        y = self._heading(g, y, "SHOT QUALITY")
+        y = self._heading(g, y, _.INS_SHOT_QUALITY)
         self._ins_shots = []
-        for label in ("Serve", "Return", "Forehand", "Backhand"):
+        for label in (_.INS_SERVE, _.INS_RETURN, _.INS_FOREHAND, _.INS_BACKHAND):
             self._ins_shots.append(self._bar_row(g, y, label))
             y += 40
-        y = self._heading(g, y + 4, "BALANCE OF POWER")
+        y = self._heading(g, y + 4, _.INS_BALANCE)
         self._ins_power = self._split(y, SPLIT_H, FONT_S, three=True)
         y += SPLIT_H + 4
         data = self._h2h()
         names = ((data.get("Player") or {}).get("LastName") or "", (data.get("Opponent") or {}).get("LastName") or "")
         g(xbmcgui.ControlLabel(CX, y, CW // 3, 22, _b(names[0]), font=FONT_XS, textColor=TEAL, alignment=AL_LEFT))
-        g(xbmcgui.ControlLabel(CX, y, CW, 22, _b("Neutral"), font=FONT_XS, textColor=MUTED, alignment=AL_CENTRE))
+        g(xbmcgui.ControlLabel(CX, y, CW, 22, _b(_.INS_NEUTRAL), font=FONT_XS, textColor=MUTED, alignment=AL_CENTRE))
         g(
             xbmcgui.ControlLabel(
                 CX + CW * 2 // 3, y, CW // 3, 22, _b(names[1]), font=FONT_XS, textColor=BLUE, alignment=AL_RIGHT
@@ -1244,7 +1244,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         # Finished games only, newest first; rows without a game yet stay empty rather than showing a blank bar.
         for i, (label, split) in enumerate(self._ins_games):
             game = h["games"][i] if i < len(h["games"]) else None
-            label.setLabel(_b(f"S{game[0]} G{game[1]}") if game else "")
+            label.setLabel(_b(_(_.INS_GAME, set=game[0], game=game[1])) if game else "")
             for key in ("a", "b", "la", "lb"):
                 split[key].setVisible(bool(game))
             if game:
@@ -1300,7 +1300,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             return
         self._moments_key = key
         later = len(self._moments) - len(seen)
-        note = f"{later} more {'moment' if later == 1 else 'moments'} later in the match" if later else ""
+        note = (_.KEY_MORE_ONE if later == 1 else _(_.KEY_MORE, count=later)) if later else ""
         self.getControl(KEY_NOTE_ID).setLabel(_b(note))
         lst = self.getControl(KEY_LIST)
         lst.reset()
@@ -1337,7 +1337,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         h = _h2h_summary(self._h2h(), p1, exclude)
         ctrls = []
         y = H2H_Y
-        for heading, rows in (("PROFILE", h["profile"]), ("CAREER", h["career"])):
+        for heading, rows in ((_.H2H_PROFILE, h["profile"]), (_.H2H_CAREER, h["career"])):
             y = self._heading(ctrls.append, y, heading)
             for i, (label, left, right, lead) in enumerate(rows):
                 lc = TEAL if lead in ("l", "tie") else P1_DIM
@@ -1376,7 +1376,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             y += 10
         meetings = h["meetings"]
         fit = max((PANEL_BOTTOM - y - 32 - MEET_STEP) // MEET_STEP, 0)
-        heading = "MEETINGS" if len(meetings) <= fit else f"MEETINGS  ·  LATEST {fit} OF {len(meetings)}"
+        heading = _.H2H_MEETINGS if len(meetings) <= fit else _(_.H2H_MEETINGS_LATEST, shown=fit, total=len(meetings))
         y = self._heading(ctrls.append, y, heading)
         fw = round(20 * self._xs)
         rh = MEET_H // 2
@@ -1384,7 +1384,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         if not meetings:
             ctrls.append(
                 xbmcgui.ControlLabel(
-                    CX, y, CW, 26, _b("No previous meetings"), font=FONT_XS, textColor=MUTED, alignment=AL_CENTRE
+                    CX, y, CW, 26, _b(_.H2H_NO_MEETINGS), font=FONT_XS, textColor=MUTED, alignment=AL_CENTRE
                 )
             )
         for m in meetings[:fit]:
@@ -1433,7 +1433,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
                 y + 2,
                 CW - 20,
                 rh,
-                _b(f"HEAD TO HEAD  ·  {a + b} MATCHES"),
+                _b(_(_.H2H_TOTAL, count=a + b)),
                 font=FONT_XS,
                 textColor=MUTED,
                 alignment=AL_LEFT,
@@ -1562,7 +1562,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
                         ry,
                         FX_NAME_W - 6 - fw,
                         half,
-                        _b(name),
+                        _b(_.DRAW_BYE if name == BYE else name),
                         font=FONT_XS,
                         textColor=colour,
                         alignment=AL_LEFT,
@@ -1672,34 +1672,34 @@ def _h2h_summary(data, p1, exclude=None):
     st, dt, prize = both("SglCareerTitles"), both("DblCareerTitles"), both("CareerPrize")
     sw, sl, dw, dl = both("SglCareerWon"), both("SglCareerLost"), both("DblCareerWon"), both("DblCareerLost")
     career = [
-        ("Singles Titles", str(st[0]), str(st[1]), _lead(*st)),
-        ("Doubles Titles", str(dt[0]), str(dt[1]), _lead(*dt)),
-        ("Prize Money", _money(prize[0]), _money(prize[1]), _lead(*prize)),
-        ("W/L Singles", f"{sw[0]}/{sl[0]}", f"{sw[1]}/{sl[1]}", _lead(_ratio(sw[0], sl[0]), _ratio(sw[1], sl[1]))),
-        ("W/L Doubles", f"{dw[0]}/{dl[0]}", f"{dw[1]}/{dl[1]}", _lead(_ratio(dw[0], dl[0]), _ratio(dw[1], dl[1]))),
+        (_.H2H_SINGLES_TITLES, str(st[0]), str(st[1]), _lead(*st)),
+        (_.H2H_DOUBLES_TITLES, str(dt[0]), str(dt[1]), _lead(*dt)),
+        (_.H2H_PRIZE_MONEY, _money(prize[0]), _money(prize[1]), _lead(*prize)),
+        (_.H2H_WL_SINGLES, f"{sw[0]}/{sl[0]}", f"{sw[1]}/{sl[1]}", _lead(_ratio(sw[0], sl[0]), _ratio(sw[1], sl[1]))),
+        (_.H2H_WL_DOUBLES, f"{dw[0]}/{dl[0]}", f"{dw[1]}/{dl[1]}", _lead(_ratio(dw[0], dl[0]), _ratio(dw[1], dl[1]))),
     ]
     hi, cur = both("SglHiRank"), both("SglRank")
-    hands = {"R": "Right", "L": "Left"}
-    backhands = {"1": "One-Handed", "2": "Two-Handed"}
+    hands = {"R": _.H2H_RIGHT, "L": _.H2H_LEFT}
+    backhands = {"1": _.H2H_ONE_HANDED, "2": _.H2H_TWO_HANDED}
     profile = [
-        ("Career High", rank(hi[0]), rank(hi[1]), _lead(*hi, lower=True) if all(hi) else "tie"),
-        ("Ranking", rank(cur[0]), rank(cur[1]), _lead(*cur, lower=True) if all(cur) else "tie"),
-        ("Age", str(pl.get("Age") or "-"), str(op.get("Age") or "-"), "tie"),
+        (_.H2H_CAREER_HIGH, rank(hi[0]), rank(hi[1]), _lead(*hi, lower=True) if all(hi) else "tie"),
+        (_.H2H_RANKING, rank(cur[0]), rank(cur[1]), _lead(*cur, lower=True) if all(cur) else "tie"),
+        (_.H2H_AGE, str(pl.get("Age") or "-"), str(op.get("Age") or "-"), "tie"),
         (
-            "Weight",
-            f"{pl['WeightKg']}kg" if pl.get("WeightKg") else "-",
-            f"{op['WeightKg']}kg" if op.get("WeightKg") else "-",
+            _.H2H_WEIGHT,
+            _(_.H2H_KG, kg=pl["WeightKg"]) if pl.get("WeightKg") else "-",
+            _(_.H2H_KG, kg=op["WeightKg"]) if op.get("WeightKg") else "-",
             "tie",
         ),
         (
-            "Height",
-            f"{pl['HeightCm']}cm" if pl.get("HeightCm") else "-",
-            f"{op['HeightCm']}cm" if op.get("HeightCm") else "-",
+            _.H2H_HEIGHT,
+            _(_.H2H_CM, cm=pl["HeightCm"]) if pl.get("HeightCm") else "-",
+            _(_.H2H_CM, cm=op["HeightCm"]) if op.get("HeightCm") else "-",
             "tie",
         ),
-        ("Handedness", hands.get(pl.get("PlayHand"), "-"), hands.get(op.get("PlayHand"), "-"), "tie"),
-        ("Backhand", backhands.get(pl.get("BackHand"), "-"), backhands.get(op.get("BackHand"), "-"), "tie"),
-        ("Turned Pro", str(pl.get("ProYear") or "-"), str(op.get("ProYear") or "-"), "tie"),
+        (_.H2H_HANDEDNESS, hands.get(pl.get("PlayHand"), "-"), hands.get(op.get("PlayHand"), "-"), "tie"),
+        (_.H2H_BACKHAND, backhands.get(pl.get("BackHand"), "-"), backhands.get(op.get("BackHand"), "-"), "tie"),
+        (_.H2H_TURNED_PRO, str(pl.get("ProYear") or "-"), str(op.get("ProYear") or "-"), "tie"),
     ]
     return {"wins": wins, "career": career, "profile": profile, "meetings": meetings}
 
@@ -1813,12 +1813,13 @@ class _Sync:
         return timeline.state_at(self.events, when) if when is not None else {}
 
 
+# Key Moments tags: (text in PlayAnywhere's English description, tag shown, its colour).
 MOMENT_TAGS = (
-    ("Break point", "BREAK POINT", BALL),
-    ("Set point", "SET POINT", TEAL),
-    ("Match point", "MATCH POINT", TEAL),
-    ("First point", "START", MUTED),
-    ("Walk On", "WALK-ON", MUTED),
+    ("Break point", _.KEY_BREAK_POINT, BALL),
+    ("Set point", _.KEY_SET_POINT, TEAL),
+    ("Match point", _.KEY_MATCH_POINT, TEAL),
+    ("First point", _.KEY_START, MUTED),
+    ("Walk On", _.KEY_WALK_ON, MUTED),
 )
 
 
@@ -1828,7 +1829,7 @@ def _moment(clip):
     who = re.match(r".* won by (.+)$", desc)
     walk = re.match(r"(.+) Walk On$", desc, re.I)
     tag, colour = next(((t, c) for key, t, c in MOMENT_TAGS if key.lower() in desc.lower()), ("", MUTED))
-    game = clip.get("game_time") or ("Before the match" if walk else "")
+    game = clip.get("game_time") or (_.KEY_BEFORE_MATCH if walk else "")
     meta = f"[COLOR={colour}]{tag}[/COLOR]  [COLOR={MUTED}]{game}[/COLOR]" if tag else f"[COLOR={MUTED}]{game}[/COLOR]"
     return {
         "clock": timeline.parse_time(clip.get("clip_time") or ""),
@@ -1885,6 +1886,7 @@ def _bye(name, code):
 
 
 def _short_round(name):
+    # A round button's label from the draw's (English) round name: "Round of 28" -> "R28", "Quarterfinal" -> "QF".
     if name.startswith("Round of "):
-        return "R" + name.split()[-1]
-    return {"Quarterfinal": "QF", "Semifinal": "SF", "Final": "F"}.get(name, name[:3])
+        return _(_.DRAW_ROUND, size=name.split()[-1])
+    return {"Quarterfinal": _.DRAW_QF, "Semifinal": _.DRAW_SF, "Final": _.DRAW_FINAL}.get(name, name[:3])

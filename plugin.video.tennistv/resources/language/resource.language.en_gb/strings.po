@@ -132,3 +132,283 @@ msgstr ""
 msgctxt "#30032"
 msgid "Reveal"
 msgstr ""
+
+msgctxt "#30033"
+msgid "SERVICE"
+msgstr ""
+
+msgctxt "#30034"
+msgid "RETURN"
+msgstr ""
+
+msgctxt "#30035"
+msgid "POINTS"
+msgstr ""
+
+msgctxt "#30036"
+msgid "Aces"
+msgstr ""
+
+msgctxt "#30037"
+msgid "Double Faults"
+msgstr ""
+
+msgctxt "#30038"
+msgid "First Serve In"
+msgstr ""
+
+msgctxt "#30039"
+msgid "First Serve Points Won"
+msgstr ""
+
+msgctxt "#30040"
+msgid "Second Serve Points Won"
+msgstr ""
+
+msgctxt "#30041"
+msgid "Break Points Saved"
+msgstr ""
+
+msgctxt "#30042"
+msgid "Service Games Played"
+msgstr ""
+
+msgctxt "#30043"
+msgid "First Return Points Won"
+msgstr ""
+
+msgctxt "#30044"
+msgid "Second Return Points Won"
+msgstr ""
+
+msgctxt "#30045"
+msgid "Break Points Converted"
+msgstr ""
+
+msgctxt "#30046"
+msgid "Return Games Played"
+msgstr ""
+
+msgctxt "#30047"
+msgid "Service Points Won"
+msgstr ""
+
+msgctxt "#30048"
+msgid "Return Points Won"
+msgstr ""
+
+msgctxt "#30049"
+msgid "Total Points Won"
+msgstr ""
+
+msgctxt "#30050"
+msgid "MOMENTUM"
+msgstr ""
+
+msgctxt "#30051"
+msgid "PREVIOUS GAMES"
+msgstr ""
+
+msgctxt "#30052"
+msgid "S{set} G{game}"
+msgstr ""
+
+msgctxt "#30053"
+msgid "ATTACK AND DEFENCE"
+msgstr ""
+
+msgctxt "#30054"
+msgid "Conversion"
+msgstr ""
+
+msgctxt "#30055"
+msgid "won when attacking"
+msgstr ""
+
+msgctxt "#30056"
+msgid "Steal"
+msgstr ""
+
+msgctxt "#30057"
+msgid "won when defending"
+msgstr ""
+
+msgctxt "#30058"
+msgid "SHOT QUALITY"
+msgstr ""
+
+msgctxt "#30059"
+msgid "Serve"
+msgstr ""
+
+msgctxt "#30060"
+msgid "Return"
+msgstr ""
+
+msgctxt "#30061"
+msgid "Forehand"
+msgstr ""
+
+msgctxt "#30062"
+msgid "Backhand"
+msgstr ""
+
+msgctxt "#30063"
+msgid "BALANCE OF POWER"
+msgstr ""
+
+msgctxt "#30064"
+msgid "Neutral"
+msgstr ""
+
+msgctxt "#30065"
+msgid "PROFILE"
+msgstr ""
+
+msgctxt "#30066"
+msgid "CAREER"
+msgstr ""
+
+msgctxt "#30067"
+msgid "MEETINGS"
+msgstr ""
+
+msgctxt "#30068"
+msgid "MEETINGS  ·  LATEST {shown} OF {total}"
+msgstr ""
+
+msgctxt "#30069"
+msgid "No previous meetings"
+msgstr ""
+
+msgctxt "#30070"
+msgid "HEAD TO HEAD  ·  {count} MATCHES"
+msgstr ""
+
+msgctxt "#30071"
+msgid "Singles Titles"
+msgstr ""
+
+msgctxt "#30072"
+msgid "Doubles Titles"
+msgstr ""
+
+msgctxt "#30073"
+msgid "Prize Money"
+msgstr ""
+
+msgctxt "#30074"
+msgid "W/L Singles"
+msgstr ""
+
+msgctxt "#30075"
+msgid "W/L Doubles"
+msgstr ""
+
+msgctxt "#30076"
+msgid "Career High"
+msgstr ""
+
+msgctxt "#30077"
+msgid "Ranking"
+msgstr ""
+
+msgctxt "#30078"
+msgid "Age"
+msgstr ""
+
+msgctxt "#30079"
+msgid "Weight"
+msgstr ""
+
+msgctxt "#30080"
+msgid "Height"
+msgstr ""
+
+msgctxt "#30081"
+msgid "Handedness"
+msgstr ""
+
+msgctxt "#30082"
+msgid "Backhand"
+msgstr ""
+
+msgctxt "#30083"
+msgid "Turned Pro"
+msgstr ""
+
+msgctxt "#30084"
+msgid "Right"
+msgstr ""
+
+msgctxt "#30085"
+msgid "Left"
+msgstr ""
+
+msgctxt "#30086"
+msgid "One-Handed"
+msgstr ""
+
+msgctxt "#30087"
+msgid "Two-Handed"
+msgstr ""
+
+msgctxt "#30088"
+msgid "{kg}kg"
+msgstr ""
+
+msgctxt "#30089"
+msgid "{cm}cm"
+msgstr ""
+
+msgctxt "#30090"
+msgid "BREAK POINT"
+msgstr ""
+
+msgctxt "#30091"
+msgid "SET POINT"
+msgstr ""
+
+msgctxt "#30092"
+msgid "MATCH POINT"
+msgstr ""
+
+msgctxt "#30093"
+msgid "START"
+msgstr ""
+
+msgctxt "#30094"
+msgid "WALK-ON"
+msgstr ""
+
+msgctxt "#30095"
+msgid "Before the match"
+msgstr ""
+
+msgctxt "#30096"
+msgid "1 more moment later in the match"
+msgstr ""
+
+msgctxt "#30097"
+msgid "{count} more moments later in the match"
+msgstr ""
+
+msgctxt "#30098"
+msgid "BYE"
+msgstr ""
+
+msgctxt "#30099"
+msgid "R{size}"
+msgstr ""
+
+msgctxt "#30100"
+msgid "QF"
+msgstr ""
+
+msgctxt "#30101"
+msgid "SF"
+msgstr ""
+
+msgctxt "#30102"
+msgid "F"
+msgstr ""
