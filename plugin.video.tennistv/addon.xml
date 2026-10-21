@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.tennistv" name="Tennis TV" provider-name="nightah" version="0.1.0">
+<addon id="plugin.video.tennistv" name="Tennis TV" provider-name="nightah" version="1.0.0">
   <requires>
     <import addon="xbmc.python" version="3.0.1"/>
     <import addon="script.module.slyguy" version="0.86.0"/>
@@ -14,8 +14,12 @@ Subscription required. Requires script.module.slyguy (installed automatically fr
     <reuselanguageinvoker>true</reuselanguageinvoker>
     <platform>all</platform>
     <license>GPL-3.0-or-later</license>
-    <news>v0.1.0
-- Initial scaffold for the StreamAMG-based Tennis TV platform: device-code sign in, replays and highlights, clear DASH playback</news>
+    <news>v1.0.0
+- Initial release for the StreamAMG-based Tennis TV platform
+- Sign in with a code or QR code, with the QR generated on the device
+- Live matches and channels, replays, highlights and features, browsable by tournament, player, category and year, plus search and your watchlist
+- Join Live, From Start or Resume for live matches that have already started
+- Match Info overlay during playback, synced to the video: live score, match and set stats, insights, head to head, key moments and the tournament draw</news>
     <assets>
       <icon>icon.png</icon>
     </assets>
