@@ -4,7 +4,7 @@
 # only the repository zip plus an index.html Kodi can browse as a file source
 set -e
 cd "$(dirname "$0")"
-ADDONS="plugin.video.kayo repository.nerv"
+ADDONS="plugin.video.kayo plugin.video.tennistv repository.nerv"
 FEED=dist/repository.nerv
 rm -rf dist
 mkdir -p "${FEED}"

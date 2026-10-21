@@ -5,4 +5,4 @@ dist/
 *.pyc
 .DS_Store
 
-plugin.video.kayo/tests/.userdata.json
+plugin.video.*/tests/.userdata.json
