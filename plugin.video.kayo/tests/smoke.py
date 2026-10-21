@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(ROOT, "shim"))
 sys.path.insert(0, os.path.join(ROOT, ".."))
 
 import requests
-from resources.lib.api import API
+from resources.lib.api import API, uncap_manifest
 from resources.lib.constants import USER_AGENT
 
 DEFAULT_ASSET = "1tc0mhfzkbbti165v1rsuewtek"  # Fox League
@@ -75,13 +75,17 @@ def playback(api, asset_id):
         )
 
     # An empty challenge can't get a key, but proves the signed licence URL is accepted and reachable
-    resp = requests.post(
+    # Sent through the addon's session, as the licence host's WAF also rejects the default Python TLS fingerprint
+    resp = api._session.post(
         details["LaUrl"],
         data=b"\x08\x04",
-        headers={"User-Agent": USER_AGENT, "Content-Type": "application/octet-stream", "X-BRAND": "KAYO"},
-        timeout=30,
+        headers={"Content-Type": "application/octet-stream", "X-BRAND": "KAYO"},
     )
-    check("licence endpoint reachable", resp.status_code not in (401, 403, 404), f"HTTP {resp.status_code}")
+    check(
+        "licence endpoint reachable",
+        resp.status_code not in (401, 403, 404),
+        f"HTTP {resp.status_code} {resp.text[:200] if not resp.ok else ''}",
+    )
 
     api.refresh_lock()
     check("lock refresh", True)
@@ -94,19 +98,16 @@ CHROME_UA = (
     " (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
 )
 
+ANDROIDTV = {
+    "PlayerId": "DAZN-androidtv",
+    "Platform": "androidtv",
+    "Model": "SHIELD Android TV",
+    "Manufacturer": "NVIDIA",
+}
+
 QUALITY_VARIANTS = [
-    ("addon (Dalvik UA, androidtv)", {"User-Agent": USER_AGENT}, {}),
-    (
-        "Dalvik UA, web player",
-        {"User-Agent": USER_AGENT},
-        {
-            "Platform": "web",
-            "PlayerId": "@dazn/peng-html5-core/web/web-rxplayer",
-            "Manufacturer": "unknown",
-            "Model": "unknown",
-        },
-    ),
-    ("Chrome UA, androidtv", {"User-Agent": CHROME_UA}, {}),
+    ("addon (Dalvik UA, web player)", {"User-Agent": USER_AGENT}, {}),
+    ("Dalvik UA, androidtv", {"User-Agent": USER_AGENT}, ANDROIDTV),
 ]
 
 
@@ -142,16 +143,15 @@ def quality(api, asset_id):
         details = data["PlaybackDetails"][0]
         token = details.get("CdnToken") or {}
         token_params = {token["Name"]: token["Value"]} if token.get("Name") else {}
-        mpd = requests.get(
-            details["ManifestUrl"], params=token_params, headers={"User-Agent": headers["User-Agent"]}, timeout=30
-        ).text
-        heights = sorted({int(x) for x in re.findall(r'height="(\d+)"', mpd)})
         query = requests.compat.urlparse(details["ManifestUrl"]).query
-        print(
-            "{:40} Resolution={} heights={} filter={}".format(
-                name, details.get("Resolution"), heights, requests.compat.unquote(query)
-            )
-        )
+        print("{:40} Resolution={} filter={}".format(name, details.get("Resolution"), requests.compat.unquote(query)))
+
+        # The addon lifts the manifest filter's height cap, check the CDN still serves it and what it then offers
+        uncapped = uncap_manifest(details["ManifestUrl"])
+        for label, url in (("as returned", details["ManifestUrl"]), ("uncapped", uncapped)):
+            resp = requests.get(url, params=token_params, headers={"User-Agent": headers["User-Agent"]}, timeout=30)
+            heights = sorted({int(x) for x in re.findall(r'height="(\d+)"', resp.text)})
+            print("{:40}   {:12} HTTP {} heights={}".format("", label, resp.status_code, heights))
 
         lock = (data.get("PlaybackLock") or {}).get("LockId")
         if lock:

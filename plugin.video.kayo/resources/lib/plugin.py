@@ -19,7 +19,7 @@ from slyguy.constants import (
 )
 from slyguy.util import async_tasks
 
-from .api import API
+from .api import API, uncap_manifest
 from .constants import BRAND, CHANNEL_NUMBERS, IMAGE_URL, LINEAR_IMAGES, USER_AGENT
 from .language import _
 from .settings import settings
@@ -397,9 +397,9 @@ def play(asset_id, start=None, **kwargs):
     token = details.get("CdnToken") or {}
     # Akamai tokens contain '#' and '=', so the value must be URL encoded or it gets cut off at the '#'
     token_param = urlencode({token["Name"]: token["Value"]}) if token.get("Name") else ""
-    manifest_url = (
-        _add_query(details["ManifestUrl"], **{token["Name"]: token["Value"]}) if token_param else details["ManifestUrl"]
-    )
+    manifest_url = uncap_manifest(details["ManifestUrl"])
+    if token_param:
+        manifest_url = _add_query(manifest_url, **{token["Name"]: token["Value"]})
 
     properties = {}
     if token_param:

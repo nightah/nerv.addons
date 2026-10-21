@@ -3,7 +3,7 @@ COUNTRY = "au"
 LANGUAGE = "en"
 
 # The CDN token returned by Playback is bound to the user-agent, so the same user-agent must be used for the API calls
-# and for the stream itself. A browser user-agent is blocked by the WAF on the sign-in endpoint.
+# and for the stream itself. A browser user-agent is blocked by the WAF on the sign-in and Playback endpoints.
 USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 12; SHIELD Android TV Build/SR1A.211012.001)"
 
 HEADERS = {"User-Agent": USER_AGENT, "X-BRAND": BRAND}
@@ -41,17 +41,19 @@ CHANNEL_NUMBERS = {
 }
 DEFAULT_ENTITLEMENT = "tier_standard_kayo"
 
-# Playback query params. With an Android user-agent the web player profile is capped at 720p
-# (aws.manifestfilter=video_height:100-720), the Android TV one is not.
+# Playback query params, matching the desktop web player (peng-html5-core). The Android TV profile's license server
+# rejects software (L3) Widevine CDMs with "Device not allowed to receive a license" (10802), the web one does not.
+# With an Android user-agent the web profile caps the manifest at 720p (aws.manifestfilter=video_height:100-720),
+# so the cap is lifted on the manifest URL before playback.
 PLAYER_PARAMS = {
     "AppVersion": "0.150.3",
     "DrmType": "WIDEVINE",
     "Format": "MPEG-DASH",
-    "PlayerId": "DAZN-androidtv",
-    "Platform": "androidtv",
-    "Model": "SHIELD Android TV",
+    "PlayerId": "@dazn/peng-html5-core/web/web",
+    "Platform": "web",
+    "Model": "unknown",
     "Secure": "true",
-    "Manufacturer": "NVIDIA",
+    "Manufacturer": "unknown",
     "PlayReadyInitiator": "false",
     "LanguageCode": LANGUAGE,
 }
