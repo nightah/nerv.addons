@@ -23,6 +23,10 @@ jobs:
       pull-requests: write  # add and remove the pull request's labels
       issues: write  # create a label the first time it is used
     steps:
+      - name: Harden the runner (audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
+        with:
+          egress-policy: audit
       - name: Parse PR title and apply labels
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         with:
