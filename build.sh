@@ -12,7 +12,7 @@ printf '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<addons>\n' > "
 for ID in ${ADDONS}; do
   VERSION=$(sed -n "s/.*<addon id=\"${ID}\"[^>]*version=\"\([^\"]*\)\".*/\1/p" "${ID}/addon.xml")
   mkdir -p "${FEED}/${ID}"
-  zip -qr "${FEED}/${ID}/${ID}-${VERSION}.zip" "${ID}" -x '*__pycache__*' '*.pyc' '*.DS_Store' "${ID}/tests/*" "${ID}/README.md"
+  zip -qr "${FEED}/${ID}/${ID}-${VERSION}.zip" "${ID}" -x '*__pycache__*' '*.pyc' '*.DS_Store' "${ID}/tests/*" "${ID}/tools/*" "${ID}/README.md"
   cp "${ID}/addon.xml" "${ID}/icon.png" "${FEED}/${ID}/"
   if [ -f "${ID}/fanart.jpg" ]; then cp "${ID}/fanart.jpg" "${FEED}/${ID}/"; fi
   sed '/^<?xml/d' "${ID}/addon.xml" >> "${FEED}/addons.xml"
