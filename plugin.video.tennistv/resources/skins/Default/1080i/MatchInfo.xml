@@ -77,6 +77,7 @@
             <control type="button" id="13">
                 <width>120</width>
                 <height>38</height>
+                <textoffsetx>0</textoffsetx>
                 <font>font10</font>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -89,6 +90,7 @@
             <control type="button" id="14">
                 <width>120</width>
                 <height>38</height>
+                <textoffsetx>0</textoffsetx>
                 <font>font10</font>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -101,6 +103,7 @@
             <control type="button" id="15">
                 <width>120</width>
                 <height>38</height>
+                <textoffsetx>0</textoffsetx>
                 <font>font10</font>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -310,6 +313,7 @@
                         <texture>$INFO[ListItem.Art(thumb)]</texture>
                     </control>
                     <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),estuary)</visible>
                         <posx>100</posx>
                         <posy>6</posy>
                         <width>262</width>
@@ -320,6 +324,29 @@
                         <label>$INFO[ListItem.Label]</label>
                     </control>
                     <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),fuse3)</visible>
+                        <posx>100</posx>
+                        <posy>6</posy>
+                        <width>262</width>
+                        <height>24</height>
+                        <font>font_hint</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label][/B]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),other)</visible>
+                        <posx>100</posx>
+                        <posy>6</posy>
+                        <width>262</width>
+                        <height>24</height>
+                        <font>font10</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label][/B]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),estuary)</visible>
                         <posx>100</posx>
                         <posy>30</posy>
                         <width>262</width>
@@ -327,6 +354,26 @@
                         <font>font_flag</font>
                         <aligny>center</aligny>
                         <label>$INFO[ListItem.Label2]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),fuse3)</visible>
+                        <posx>100</posx>
+                        <posy>30</posy>
+                        <width>262</width>
+                        <height>22</height>
+                        <font>font_hint</font>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label2][/B]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),other)</visible>
+                        <posx>100</posx>
+                        <posy>30</posy>
+                        <width>262</width>
+                        <height>22</height>
+                        <font>font10</font>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label2][/B]</label>
                     </control>
             </itemlayout>
             <focusedlayout height="62" width="372">
@@ -349,6 +396,7 @@
                         <texture>$INFO[ListItem.Art(thumb)]</texture>
                     </control>
                     <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),estuary)</visible>
                         <posx>100</posx>
                         <posy>6</posy>
                         <width>262</width>
@@ -359,6 +407,29 @@
                         <label>$INFO[ListItem.Label]</label>
                     </control>
                     <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),fuse3)</visible>
+                        <posx>100</posx>
+                        <posy>6</posy>
+                        <width>262</width>
+                        <height>24</height>
+                        <font>font_hint</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label][/B]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),other)</visible>
+                        <posx>100</posx>
+                        <posy>6</posy>
+                        <width>262</width>
+                        <height>24</height>
+                        <font>font10</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label][/B]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),estuary)</visible>
                         <posx>100</posx>
                         <posy>30</posy>
                         <width>262</width>
@@ -366,6 +437,26 @@
                         <font>font_flag</font>
                         <aligny>center</aligny>
                         <label>$INFO[ListItem.Label2]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),fuse3)</visible>
+                        <posx>100</posx>
+                        <posy>30</posy>
+                        <width>262</width>
+                        <height>22</height>
+                        <font>font_hint</font>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label2][/B]</label>
+                    </control>
+                    <control type="label">
+                        <visible>String.IsEqual(Window.Property(tennistv.font),other)</visible>
+                        <posx>100</posx>
+                        <posy>30</posy>
+                        <width>262</width>
+                        <height>22</height>
+                        <font>font10</font>
+                        <aligny>center</aligny>
+                        <label>[B]$INFO[ListItem.Label2][/B]</label>
                     </control>
             </focusedlayout>
         </control>
