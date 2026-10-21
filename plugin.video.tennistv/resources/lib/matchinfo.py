@@ -22,12 +22,12 @@ ROUND_BASE, ROUND_MAX = 40, 7
 BODY_ID, REVEAL_ID, KEY_NOTE_ID = 50, 60, 81
 SECTIONS = (SEC_LIVE, SEC_DRAW, SEC_KEY)
 SUBS = (SUB_STATS, SUB_INSIGHTS, SUB_H2H)
-# Section tab label widths in Estuary's font10 on a 16:9 screen; the tabs are spaced evenly from these.
+# Section tab label widths in Estuary's font10 (bold) on a 16:9 screen; the tabs are spaced evenly from these.
 SEC_TEXT = {SEC_LIVE: 102, SEC_DRAW: 58, SEC_KEY: 148}
 SUB_X = {SUB_STATS: 1524, SUB_INSIGHTS: 1650, SUB_H2H: 1776}
-# The section tabs share the top row with the ATP+ logo (no title above them: the selected tab says where you are).
+# The section tabs share the top row with the ATP+ logo when they fit beside it, else the logo sits above them (no
+# title: the selected tab says where you are).
 TABS_Y, LINE_Y, TAB_MIN_GAP = 24, 58, 10  # tab row top, the underline under it, the least gap between tabs
-TAB_TEXT_FIT = 0.95  # rendered tab label width / SEC_TEXT estimate (measured on device)
 SUB_Y, SUB_H = 66, 38
 SET_GAP, SET_H = 8, 36
 
@@ -50,12 +50,23 @@ KEY_LIST = 80  # the Key Moments list (MatchInfo.xml)
 OFFSCREEN = 4000
 
 # Estuary's font10/12 are a thin ("lighten") weight; its small bold sizes match the mock. Other skins lack these
-# names (an unknown font falls back to the large font13), so they use font10, which the labels then bold.
+# names (an unknown font falls back to the large font13), so they use font10, which the labels then bold. Arctic
+# Fuse 3's font10 is Inter 21, up to a quarter wider than Estuary's 18 and cut off in the stat rows, so its small text
+# uses font_hint (Inter 15), the nearest size it has that fits.
 _ESTUARY = xbmc.getSkinDir() == "skin.estuary"
-FONT_XS = "font_flag" if _ESTUARY else "font10"  # 18, bold
+_FUSE_3 = xbmc.getSkinDir() == "skin.arctic.fuse.3"
+FONT_XS = "font_flag" if _ESTUARY else "font_hint" if _FUSE_3 else "font10"  # 18, bold
+if _FUSE_3:
+    # Its font10 is Inter 21, a little narrower than Estuary's for these labels (measured from the skin's bold font),
+    # so the tabs are spaced from its own widths and stay centred.
+    SEC_TEXT = {SEC_LIVE: 103, SEC_DRAW: 54, SEC_KEY: 144}
 FONT_S = "font20_title" if _ESTUARY else "font10"  # 20, bold
 FONT_M = "font25_title" if _ESTUARY else "font12"  # 25, bold
 FONT_L = "font30_title" if _ESTUARY else "font13"  # 30, bold
+# The Key Moments list's fonts are fixed in MatchInfo.xml, which has a copy of each label per FONT_XS choice, shown by
+# this property.
+FONT_PROP = "tennistv.font"
+FONT_SET = "estuary" if _ESTUARY else "fuse3" if _FUSE_3 else "other"
 
 TEAL = "FF2FB8AC"
 BLUE = "FF4F9BE8"
@@ -250,6 +261,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         sync = _Sync.load(api, (tid, year, match_id), hls, (stats.get("PlayerTeam1") or {}).get("PlayerId"))
         revealed = sync is not None or stats.get("Status") != "Finished"
         dialog = cls("MatchInfo.xml", ADDON_PATH, "Default", "1080i")
+        dialog.setProperty(FONT_PROP, FONT_SET)
         dialog.setup(api, tid, year, match_id, revealed, stats, sync)
         dialog._h2h()  # the header needs it; loading it now means the overlay opens complete
         dialog._opened = (opened, time.time())
@@ -283,19 +295,22 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         # Every conditional control is hidden by a window property until its view is ready (see _refresh).
         self._xs = x_scale()
         self._toggle = keybind.bound_code()
-        self.getControl(SEC_LIVE).setLabel(_.SEC_LIVE_STATS)
-        self.getControl(SEC_DRAW).setLabel(_.TAB_DRAW)
-        self.getControl(SEC_KEY).setLabel(_.SEC_KEY)
+        self.getControl(SEC_LIVE).setLabel(_b(_.SEC_LIVE_STATS))
+        self.getControl(SEC_DRAW).setLabel(_b(_.TAB_DRAW))
+        self.getControl(SEC_KEY).setLabel(_b(_.SEC_KEY))
         self.getControl(SUB_STATS).setLabel(_b(_.TAB_STATS), font=FONT_S)
         self.getControl(SUB_INSIGHTS).setLabel(_b(_.SUB_INSIGHTS), font=FONT_S)
         self.getControl(SUB_H2H).setLabel(_b(_.SUB_H2H), font=FONT_S)
         self.getControl(REVEAL_ID).setLabel(_b(_.REVEAL))
         # The ATP+ mark from the web player's panel header, narrowed on a wide screen like the headshots, at the right
-        # of the tab row when the tabs still fit beside it (on a 16:9 screen they need the whole width).
+        # of the tab row when the tabs still fit beside it. On a 16:9 screen they need the whole width, so it goes on
+        # its own line in the margin above them.
         logo_w = round(ATP_LOGO_H * 195 / 44 * self._xs)
         if self._layout_sections(CW - logo_w - 12):
             logo_y = TABS_Y + (32 - ATP_LOGO_H) // 2  # centred on the tab row
-            self._mk(xbmcgui.ControlImage(CX + CW - logo_w, logo_y, logo_w, ATP_LOGO_H, _tex("atp-plus.png")))
+        else:
+            logo_y = (TABS_Y - ATP_LOGO_H) // 2
+        self._mk(xbmcgui.ControlImage(CX + CW - logo_w, logo_y, logo_w, ATP_LOGO_H, _tex("atp-plus.png")))
         # Section-tab underline: a full-width dim track with a teal segment under the active tab.
         self._mk(xbmcgui.ControlImage(CX, LINE_Y, CW, 2, _white(), colorDiffuse=f"0x{LINE}"))
         self._sec_ind = self._mk(
@@ -491,20 +506,19 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
         return self._gate(control, HDR_PROP)
 
     def _layout_sections(self, room):
-        # Space the section tabs evenly across room (or the whole width when they do not fit in it): the same gap
-        # before, between and after the labels. Each button is its label plus half a gap either side, laid out from
-        # the left. Text keeps its shape on a wide screen, so it takes fewer skin units there. Returns whether room
-        # was used.
+        # Space the section tabs evenly across room (or the whole width when they do not fit in it). Each button is its
+        # label plus half a gap either side, run on from the panel edge, so the labels are a gap apart and half a gap
+        # from each end, centred. The padding also keeps a bold label clear of its button's edge, where Kodi cuts it
+        # off. Text keeps its shape on a wide screen, so it takes fewer skin units there. Returns whether room was used.
         widths = {sec: SEC_TEXT[sec] * self._xs for sec in SECTIONS}
         fits = sum(widths.values()) + 4 * TAB_MIN_GAP <= room
-        gap = ((room if fits else CW) - sum(widths.values())) / 4
-        x = CX  # the first button starts at the panel edge; its label is centred in it
+        gap = ((room if fits else CW) - sum(widths.values())) / len(SECTIONS)
+        x = CX
         self._sec_x, self._sec_w = {}, {}
         for sec in SECTIONS:
             button = round(widths[sec] + gap)
             self.getControl(sec).setWidth(button)
-            # The underline matches the label, which renders a little narrower than estimated (Estuary's light weight).
-            line = round(widths[sec] * TAB_TEXT_FIT)
+            line = round(widths[sec])  # the underline matches the label
             self._sec_x[sec], self._sec_w[sec] = x + (button - line) // 2, line
             x += button
         return fits
@@ -933,6 +947,9 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
             self._clear_draw()
         self._sec_ind.setWidth(self._sec_w[self._section])
         self._sec_ind.setPosition(self._sec_x[self._section], LINE_Y)
+        # The labels are bold so the focused one's white reads on a TV; the active one stays white when unfocused.
+        for sec, label in ((SEC_LIVE, _.SEC_LIVE_STATS), (SEC_DRAW, _.TAB_DRAW), (SEC_KEY, _.SEC_KEY)):
+            self.getControl(sec).setLabel(f"[COLOR=FFFFFFFF]{_b(label)}[/COLOR]" if sec == self._section else _b(label))
         self._highlight_active(live, show_stats)
         self._wire_nav()
         self._render()
