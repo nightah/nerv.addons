@@ -229,7 +229,7 @@ def _png_size(path):
         return struct.unpack(">II", f.read(24)[16:24])
 
 
-def _x_scale():
+def x_scale():
     # Kodi stretches the 1920x1080 skin to fill the screen, so on a wider screen (eg. 21:9) a square in skin units
     # shows up wide. Round headshots and flags are narrowed by this factor so they keep their shape.
     w, h = xbmcgui.getScreenWidth(), xbmcgui.getScreenHeight()
@@ -281,7 +281,7 @@ class MatchInfo(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         # Every conditional control is hidden by a window property until its view is ready (see _refresh).
-        self._xs = _x_scale()
+        self._xs = x_scale()
         self._toggle = keybind.bound_code()
         self.getControl(SEC_LIVE).setLabel(_.SEC_LIVE_STATS)
         self.getControl(SEC_DRAW).setLabel(_.TAB_DRAW)

@@ -1,6 +1,7 @@
 [files]
 # The GPL text is reproduced verbatim, in US spelling; Kodi skin XML uses US spelling ("center") and hex colours.
-extend-exclude = ["LICENSE", "LICENSE.txt", "**/resources/skins/**"]
+# The vendored QR library keeps its upstream US spelling.
+extend-exclude = ["LICENSE", "LICENSE.txt", "**/resources/skins/**", "**/resources/lib/qrcodegen.py"]
 
 [default]
 locale = "en-au"
