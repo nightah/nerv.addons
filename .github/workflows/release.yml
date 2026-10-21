@@ -24,6 +24,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - name: Harden the runner (audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
@@ -43,8 +47,11 @@ jobs:
             exit 1
           fi
           PREVIOUS=$(git tag -l "$ID-v*" --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n1)
-          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "$ID - v$VERSION" \
-            --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          # Only this add-on's pull requests (labelled from their title's scope, see pr-labels.yml).
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$GITHUB_REF_NAME" \
+            ${PREVIOUS:+-f previous_tag_name="$PREVIOUS"} -f configuration_file_path=".github/release/$ID.yml" \
+            --jq .body > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "$ID - v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:
           path: dist

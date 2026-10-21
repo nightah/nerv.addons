@@ -12,6 +12,8 @@ extend-ignore-re = ['align="center"', '"[a-z]{3}": "[a-z]{2}"', 'PNGs']
 [default.extend-words]
 # Australian spelling of the noun; typos can't tell it from the verb "license".
 licence = "licence"
+# GitHub's pull request event activity type, fixed by the Actions API.
+synchronize = "synchronize"
 
 [default.extend-identifiers]
 # Names fixed by external APIs: the DASH manifest attribute, Arrow's method, and the HTTP header.

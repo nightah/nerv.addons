@@ -1,0 +1,73 @@
+---
+# Labels each pull request from its Conventional Commits title: type/<type> and, for a scoped title, area/<scope>.
+# The release workflow builds each add-on's notes from its area label (.github/release/<addon id>.yml).
+name: PR Labels
+
+on:
+  # Runs with the base repository's token so pull requests from forks can be labelled too. Nothing from the pull
+  # request is checked out or run: the script only reads its title and labels.
+  pull_request_target:  # zizmor: ignore[dangerous-triggers]
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions: {}
+
+jobs:
+  label:
+    name: Apply Labels
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write  # add and remove the pull request's labels
+      issues: write  # create a label the first time it is used
+    steps:
+      - name: Harden the runner (audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Parse PR title and apply labels
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
+        with:
+          # yamllint disable rule:indentation
+          script: |
+            // The squash merge uses the title as the commit subject, so it is held to the same rules as the
+            // commit-msg hook in .lefthook.yml (keep the types and scopes in step with it).
+            const types = ['build', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'release', 'revert', 'test'];
+            const scopes = ['deps', 'github', 'kayo', 'lefthook', 'renovate', 'repository', 'tennistv'];
+
+            const title = context.payload.pull_request.title;
+            const match = title.match(/^([a-z]+)(\(([a-z0-9-]+)\))?!?: .+/);
+            if (!match || !types.includes(match[1]) || (match[3] && !scopes.includes(match[3]))) {
+              core.setFailed(
+                `PR title must be <type>[(<scope>)][!]: <description>, with type one of ${types.join('|')} ` +
+                  `and scope one of ${scopes.join('|')}. Got: ${title}`,
+              );
+              return;
+            }
+            if (title.length > 72 || title !== title.toLowerCase()) {
+              core.setFailed(`PR title must be lowercase and at most 72 characters. Got: ${title}`);
+              return;
+            }
+
+            const desired = new Set([`type/${match[1]}`]);
+            if (match[3]) {
+              desired.add(`area/${match[3]}`);
+            }
+
+            const existing = context.payload.pull_request.labels.map((l) => l.name);
+            const issue = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number };
+
+            for (const name of existing) {
+              if ((name.startsWith('type/') || name.startsWith('area/')) && !desired.has(name)) {
+                await github.rest.issues.removeLabel({ ...issue, name });
+              }
+            }
+
+            const toAdd = [...desired].filter((name) => !existing.includes(name));
+            if (toAdd.length > 0) {
+              await github.rest.issues.addLabels({ ...issue, labels: toAdd });
+            }
+          # yamllint enable rule:indentation
+...
