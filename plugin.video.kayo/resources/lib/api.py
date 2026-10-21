@@ -2,9 +2,11 @@ import base64
 import binascii
 import json
 import os
+import re
 import uuid
 from time import time
 
+from six.moves.urllib_parse import parse_qsl, urlencode, urlparse, urlunparse
 from slyguy import mem_cache, userdata
 from slyguy.exceptions import Error
 from slyguy.log import log
@@ -33,6 +35,16 @@ from .language import _
 
 class APIError(Error):
     pass
+
+
+def uncap_manifest(url):
+    # Lift the upper bound of the video_height filter, keeping any other filter clauses
+    parsed = urlparse(url)
+    query = [
+        (k, re.sub(r"(video_height:\d+)-\d+", r"\1-32767", v) if k == "aws.manifestfilter" else v)
+        for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+    ]
+    return urlunparse(parsed._replace(query=urlencode(query)))
 
 
 def jwt_data(token):
