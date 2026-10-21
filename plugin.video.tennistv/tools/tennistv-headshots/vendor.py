@@ -34,8 +34,8 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(__file__)
-PLAYERS_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "plugin.video.tennistv/resources/media/players"))
-FLAGS_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "plugin.video.tennistv/resources/media/flags"))
+PLAYERS_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "resources/media/players"))
+FLAGS_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "resources/media/flags"))
 API = "https://api.tennistv.com/tennis/v1"
 FLAG_PNG = "https://flagcdn.com/48x36/{iso}.png"
 # ATP nationalities are IOC codes; flagcdn is keyed by ISO 3166-1 alpha-2.

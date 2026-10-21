@@ -23,5 +23,5 @@ indent_size = unset
 indent_size = unset
 
 # Embeds a JavaScript harvester and shell snippets with their own indentation.
-[tools/tennistv-headshots/*]
+[plugin.video.tennistv/tools/tennistv-headshots/*]
 indent_size = unset

@@ -31,6 +31,6 @@ cp -R "${ID}" "${STAGE}/${ID}"
 sed "s/version=\"${BASE}\"/version=\"${DEV}\"/" "${ID}/addon.xml" > "${STAGE}/${ID}/addon.xml"
 
 rm -f "${OUT}"
-(cd "${STAGE}" && zip -qr "${ID}.zip" "${ID}" -x '*__pycache__*' '*.pyc' '*.DS_Store' "${ID}/tests/*" "${ID}/README.md")
+(cd "${STAGE}" && zip -qr "${ID}.zip" "${ID}" -x '*__pycache__*' '*.pyc' '*.DS_Store' "${ID}/tests/*" "${ID}/tools/*" "${ID}/README.md")
 mv "${STAGE}/${ID}.zip" "${OUT}"
 echo "${OUT} (version ${DEV})"

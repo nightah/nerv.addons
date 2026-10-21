@@ -9,7 +9,7 @@ Headshots come from `atptour.com`, which gates on a Cloudflare TLS-fingerprint c
 1. Print the harvester (roster sids baked in):
 
    ```sh
-   python3 tools/tennistv-headshots/vendor.py --harvester
+   python3 plugin.video.tennistv/tools/tennistv-headshots/vendor.py --harvester
    ```
 
 2. Open any headshot URL in Chrome so the page is on the atptour.com origin with Cloudflare cleared, for example `https://www.atptour.com/-/media/alias/player-headshot/S0AG`. Open the DevTools console and paste the harvester. It fetches every headshot, then adds a COPY button. The full set is tens of MB, too large for one clipboard write, so click the button once per batch:
@@ -22,7 +22,7 @@ Headshots come from `atptour.com`, which gates on a Cloudflare TLS-fingerprint c
 3. Install from the batches:
 
    ```sh
-   cat batch*.json | python3 tools/tennistv-headshots/vendor.py --install
+   cat batch*.json | python3 plugin.video.tennistv/tools/tennistv-headshots/vendor.py --install
    ```
 
    Each headshot is resized to 160px, compressed with pngquant and written to `resources/media/players/<sid>.png`. Files not in the bundle (such as retired legends) are kept.
@@ -30,7 +30,7 @@ Headshots come from `atptour.com`, which gates on a Cloudflare TLS-fingerprint c
 ## Re-vendor flags
 
 ```sh
-python3 tools/tennistv-headshots/vendor.py --flags
+python3 plugin.video.tennistv/tools/tennistv-headshots/vendor.py --flags
 ```
 
 Fetches a 48x36 flag PNG for each roster nationality and writes it to `resources/media/flags/<code>.png`. Neutral athletes (RUS, BLR) have no flag and are skipped; a new nationality needs an entry in `IOC_ISO`.
