@@ -1,0 +1,9 @@
+---
+# Release notes for plugin.video.kayo: only pull requests labelled area/kayo (from a kayo-scoped title, see
+# workflows/pr-labels.yml). With no catch-all category, every other pull request is left out.
+changelog:
+  categories:
+    - title: What's Changed
+      labels:
+        - area/kayo
+...

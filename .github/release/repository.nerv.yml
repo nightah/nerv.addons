@@ -1,0 +1,9 @@
+---
+# Release notes for repository.nerv: only pull requests labelled area/repository (from a repository-scoped title, see
+# workflows/pr-labels.yml). With no catch-all category, every other pull request is left out.
+changelog:
+  categories:
+    - title: What's Changed
+      labels:
+        - area/repository
+...
