@@ -22,7 +22,7 @@ msgid "Kayo sign in failed: {result}"
 msgstr ""
 
 msgctxt "#30005"
-msgid "Your Kayo session expired and could not be refreshed. Please sign in again.\n{error}"
+msgid "Your Kayo session expired and could not be refreshed. Please sign in again.[CR]{error}"
 msgstr ""
 
 msgctxt "#30006"
@@ -55,4 +55,48 @@ msgstr ""
 
 msgctxt "#30014"
 msgid "Resume"
+msgstr ""
+
+msgctxt "#30015"
+msgid "Login method"
+msgstr ""
+
+msgctxt "#30016"
+msgid "QR code"
+msgstr ""
+
+msgctxt "#30017"
+msgid "Email and password"
+msgstr ""
+
+msgctxt "#30018"
+msgid "Scan the QR code with a phone or computer signed in to Kayo, or go to [B]{url}[/B], and approve this device"
+msgstr ""
+
+msgctxt "#30019"
+msgid "The QR code expired before it was approved. Please try again."
+msgstr ""
+
+msgctxt "#30020"
+msgid "Kayo could not switch profile: {error}"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Kayo is only available in Australia.[CR]If you are in Australia, turn off any VPN or proxy and try again."
+msgstr ""
+
+msgctxt "#30022"
+msgid "Kayo blocked the request ({url}).[CR]Try again shortly, and check no VPN or proxy is in use."
+msgstr ""
+
+msgctxt "#30023"
+msgid "Too many Kayo streams are playing (your plan allows {max}).[CR]Stop playback on another device and try again."
+msgstr ""
+
+msgctxt "#30024"
+msgid "Kayo did not allow this device a licence for the stream (10802).[CR]Make sure Widevine CDM is installed and up to date in the SlyGuy settings."
+msgstr ""
+
+msgctxt "#30025"
+msgid "Kayo could not load its service configuration: {error}"
 msgstr ""

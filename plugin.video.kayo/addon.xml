@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.kayo" name="Kayo Sports" provider-name="nightah" version="1.2.1">
+<addon id="plugin.video.kayo" name="Kayo Sports" provider-name="nightah" version="1.3.0">
   <requires>
     <import addon="xbmc.python" version="3.0.1"/>
     <import addon="script.module.slyguy" version="0.86.0"/>
@@ -14,7 +14,16 @@ Subscription required. Requires script.module.slyguy (installed automatically fr
     <reuselanguageinvoker>true</reuselanguageinvoker>
     <platform>all</platform>
     <license>GPL-3.0-or-later</license>
-    <news>v1.2.1
+    <news>v1.3.0
+- Sign in by scanning a QR code (email and password sign in is still available under Login method in the settings)
+- Choose which Kayo profile to watch as
+- Resume points are synced with Kayo, so replays and live events resume where you stopped on any device
+- Keep the start of live events longer than 4 hours (eg. Test cricket) in the rewind window
+- Request HEVC and Dolby audio where SlyGuy's codec settings allow it
+- Skip a Kayo CDN that doesn't respond
+- Clearer messages for geo-blocking, too many streams and licence errors
+
+v1.2.1
 - Fix "Widevine license request failed" on devices with a software Widevine CDM (Linux, Windows, macOS)
 
 v1.2.0

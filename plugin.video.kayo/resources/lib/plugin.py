@@ -1,6 +1,8 @@
 import codecs
+import json
 import os
 import sys
+from time import time
 from xml.sax.saxutils import escape, quoteattr
 
 import arrow
@@ -10,17 +12,32 @@ from slyguy import gui, inputstream, plugin, signals, userdata
 from slyguy.constants import (
     ADDON_ICON,
     ADDON_PATH,
+    NO_RESUME_TAG,
     PLAY_FROM_ASK,
     PLAY_FROM_LIVE,
     PLAY_FROM_START,
     ROUTE_LIVE_TAG,
+    ROUTE_RESUME_TAG,
     ROUTE_SETTINGS,
     ROUTE_TAG,
 )
+from slyguy.log import log
 from slyguy.util import async_tasks
 
 from .api import API, uncap_manifest
-from .constants import BRAND, CHANNEL_NUMBERS, IMAGE_URL, LINEAR_IMAGES, USER_AGENT
+from .constants import (
+    BRAND,
+    CHANNEL_NUMBERS,
+    IMAGE_URL,
+    LINEAR_IMAGES,
+    LOGIN_EMAIL,
+    QR_POLL_INTERVAL,
+    QR_TIMEOUT,
+    RESUME_MIN,
+    TIMESHIFT_DEFAULT,
+    TIMESHIFT_MARGIN,
+    USER_AGENT,
+)
 from .language import _
 from .settings import settings
 
@@ -77,6 +94,15 @@ def home(**kwargs):
                 bookmark=False,
             )
 
+        profile = api.profile()
+        folder.add_item(
+            label=_.SELECT_PROFILE,
+            art={"thumb": profile["avatar"]} if profile.get("avatar") else _icon("account"),
+            info={"plot": profile.get("name")},
+            path=plugin.url_for(select_profile),
+            _kiosk=False,
+            bookmark=False,
+        )
         folder.add_item(label=_.LOGOUT, art=_icon("account"), path=plugin.url_for(logout), _kiosk=False, bookmark=False)
 
     folder.add_item(
@@ -91,18 +117,85 @@ def home(**kwargs):
 
 @plugin.route()
 def login(**kwargs):
+    if not (_login_email() if settings.LOGIN_METHOD.value == LOGIN_EMAIL else _login_qr()):
+        return
+
+    # Signed in either way, so a profile problem shouldn't undo that
+    try:
+        _select_profile()
+    except Exception as e:
+        log.warning(f"Kayo profile selection failed: {e}")
+
+    gui.refresh()
+
+
+def _login_email():
     username = gui.input(_.ASK_EMAIL, default=userdata.get("username", "")).strip()
     if not username:
-        return
+        return False
 
     userdata.set("username", username)
 
     password = gui.input(_.ASK_PASSWORD, hide_input=True).strip()
     if not password:
-        return
+        return False
 
     api.login(username, password)
-    gui.refresh()
+    return True
+
+
+def _login_qr():
+    from .qr import progress_qr
+
+    data = api.device_code()
+    # Shown without the scheme so it fits on one line of the dialog
+    url = data["url"].split("://", 1)[-1]
+    monitor = xbmc.Monitor()
+    with progress_qr(data["url"], _(_.QR_HELP, url=url), heading=_.LOGIN) as progress:
+        for elapsed in range(QR_TIMEOUT):
+            # Wait through the monitor, not time.sleep: a raw sleep blocks the interpreter without yielding to
+            # Kodi, which drops the dialog after a beat while this loop keeps polling (the code only flashes up).
+            if progress.iscanceled() or monitor.waitForAbort(1):
+                return False
+
+            progress.update(int(elapsed * 100 / QR_TIMEOUT))
+            if elapsed % QR_POLL_INTERVAL == 0 and api.device_login(data["id"]):
+                return True
+
+    gui.ok(_.QR_EXPIRED)
+    return False
+
+
+@plugin.route()
+@plugin.login_required()
+def select_profile(**kwargs):
+    if _select_profile():
+        gui.refresh()
+
+
+def _select_profile():
+    # Returns True when a profile was chosen; with a single profile it is just recorded
+    profiles = api.profiles()
+    if not profiles:
+        return False
+
+    current = api.profile().get("id")
+    if len(profiles) == 1:
+        index = 0
+    else:
+        options = [
+            plugin.Item(label=x.get("profileName") or x["profileId"], art={"thumb": x.get("avatar")}) for x in profiles
+        ]
+        preselect = next((i for i, x in enumerate(profiles) if x["profileId"] == current), 0)
+        index = gui.select(_.SELECT_PROFILE, options=options, preselect=preselect, useDetails=True)
+        if index < 0:
+            return False
+
+    profile = profiles[index]
+    api.switch_profile(profile)
+    if len(profiles) > 1:
+        gui.notification(_.PROFILE_ACTIVATED, heading=profile.get("profileName"), icon=profile.get("avatar"))
+    return True
 
 
 @plugin.route()
@@ -343,6 +436,10 @@ def _parse_tile(tile):
     if start and not tile.get("IsLinear"):
         info["aired"] = start.to("local").format("YYYY-MM-DD")
 
+    duration = int((tile.get("DurationInMillis") or 0) / 1000) if not is_live and not is_upcoming else 0
+    if duration:
+        info["duration"] = duration
+
     return plugin.Item(
         label=label,
         art=art,
@@ -352,46 +449,93 @@ def _parse_tile(tile):
             play,
             asset_id=tile["AssetId"],
             start=tile.get("Start") if is_upcoming or (is_live and not tile.get("IsLinear")) else None,
+            duration=duration or None,
             _is_live=is_live,
+            # Kayo's resume points (shared with its apps) are used instead of Kodi's own; live items always skip it
+            **{NO_RESUME_TAG: True},
         ),
     )
 
 
+def _stream_start(data):
+    # The epoch the stream's timeline starts at, which can be a few minutes after the tile's scheduled Start
+    start_from = int((data.get("ResumePoints") or {}).get("StartFrom") or 0)
+    if start_from > 24 * 60 * 60:
+        return start_from
+
+    start = (data.get("Asset") or {}).get("StartTime")
+    return int(arrow.get(start).datetime.timestamp()) if start else 0
+
+
+def _resume_position(data, start_from):
+    # Seconds into the stream to resume at, or 0. A replay's ResumeFrom is an offset (Kayo already takes 10 seconds
+    # off it); a live event's is the epoch it was stopped at, as Kayo's apps store it (see playback_callback).
+    position = int((data.get("ResumePoints") or {}).get("ResumeFrom") or 0)
+    if position > 24 * 60 * 60:
+        position = position - start_from if start_from else 0
+    return position if position >= RESUME_MIN else 0
+
+
+def _timeshift_limit(data, start_from):
+    # Covers the event's scheduled length, or how long it has run if it is overrunning, plus room to overrun
+    asset = data.get("Asset") or {}
+    scheduled = 0
+    if asset.get("StartTime") and asset.get("EndTime"):
+        scheduled = (arrow.get(asset["EndTime"]) - arrow.get(asset["StartTime"])).total_seconds()
+        # Linear channels end in the year 3000
+        if scheduled > 24 * 60 * 60:
+            scheduled = 0
+
+    elapsed = time() - start_from if start_from else 0
+    return int(max(scheduled, elapsed) + TIMESHIFT_MARGIN)
+
+
 @plugin.route()
 @plugin.login_required()
-def play(asset_id, start=None, **kwargs):
+def play(asset_id, start=None, duration=None, **kwargs):
     if start and arrow.get(start) > arrow.utcnow():
         gui.ok(_(_.NOT_STARTED, start=arrow.get(start).to("local").humanize()))
         return
 
-    # Live events keep the whole event in the DVR window, so they can be joined live, watched from the start, or
-    # resumed from where they were last stopped
-    offset = int((arrow.utcnow() - arrow.get(start)).total_seconds()) if start and kwargs.get(ROUTE_LIVE_TAG) else 0
+    is_live = bool(kwargs.get(ROUTE_LIVE_TAG))
+    # Live events (not linear channels) carry their start, and keep the whole event in the DVR window, so they can
+    # be joined live, watched from the start, or resumed from where they were last stopped
+    is_event = is_live and bool(start)
+    offset = int((arrow.utcnow() - arrow.get(start)).total_seconds()) if is_event else 0
+    duration = int(duration or 0)
+
+    data = api.play(asset_id)
+    details = data["PlaybackDetails"][0]
+    start_from = _stream_start(data) if is_event else 0
+    resume_pos = _resume_position(data, start_from) if is_event or not is_live else 0
+
     play_type = PLAY_FROM_LIVE
     resume_target = None
     if offset > 0:
-        # lock_callback stores the absolute stream position (getTime) this event was last watched at, so resume
-        # seeks straight to it; the position is frozen at the stop point, so it never drifts while stopped
-        saved = userdata.get("resume") or {}
-        resume_pos = int(saved["pos"]) if saved.get("asset") == asset_id and saved.get("pos") is not None else None
-
         play_type = settings.LIVE_PLAY_TYPE.value
         if play_type == PLAY_FROM_ASK:
             options = [_.JOIN_LIVE, _.FROM_START]
-            can_resume = resume_pos is not None and 0 < resume_pos < offset
+            can_resume = 0 < resume_pos < time() - start_from
             if can_resume:
                 options.append(_.RESUME)
 
             index = gui.context_menu(options)
             if index == -1:
+                api.release_lock()
                 return
 
             play_type = PLAY_FROM_START if index == 1 else PLAY_FROM_LIVE
             if can_resume and index == 2:
                 resume_target = max(resume_pos - RESUME_BUFFER, 0)
 
-    data = api.play(asset_id)
-    details = data["PlaybackDetails"][0]
+    elif not is_live and resume_pos and not kwargs.get(ROUTE_RESUME_TAG):
+        # Skip a resume point at the very end, which is a replay watched to the finish. ROUTE_RESUME_TAG means Kodi
+        # already resumed from its own bookmark (an item added before Kayo's resume points were used).
+        if not duration or resume_pos < duration - RESUME_MIN:
+            resume_target = plugin.resume_from(resume_pos)
+            if resume_target == -1:
+                api.release_lock()
+                return
 
     # The CDN token has to be on the manifest and on every segment request
     token = details.get("CdnToken") or {}
@@ -405,11 +549,30 @@ def play(asset_id, start=None, **kwargs):
     if token_param:
         properties["stream_params"] = token_param
 
-    lock_interval = int((data.get("PlaybackLock") or {}).get("UpdateLockIntervalSeconds") or 0)
+    if is_event:
+        limit = _timeshift_limit(data, start_from)
+        if limit > TIMESHIFT_DEFAULT:
+            properties["manifest_config"] = json.dumps({"timeshift_bufferlimit": limit})
 
-    # resume_asset lets lock_callback store the position only for resumable live events, not linear channels
-    callback_url = plugin.url_for(lock_callback, resume_asset=asset_id) if offset > 0 else plugin.url_for(lock_callback)
+    lock_interval = int((data.get("PlaybackLock") or {}).get("UpdateLockIntervalSeconds") or 0)
     interval = max(lock_interval - 15, 30)
+
+    # Linear channels have no position worth keeping, so only events and replays post resume points
+    callback_url = plugin.url_for(playback_callback)
+    if is_event or not is_live:
+        asset = data.get("Asset") or {}
+        callback_url = plugin.url_for(
+            playback_callback,
+            asset_id=asset_id,
+            video_type="LIVE" if is_live else "VOD",
+            start_from=start_from or None,
+            duration=duration or None,
+            event_id=asset.get("EventId"),
+            asset_type_id=(asset.get("Type") or {}).get("Id"),
+        )
+        update = int((data.get("ResumePoints") or {}).get("UpdateInterval") or 0)
+        if update:
+            interval = max(min(interval, update), 30)
 
     item = plugin.Item(
         path=manifest_url,
@@ -419,15 +582,15 @@ def play(asset_id, start=None, **kwargs):
             license_headers={"User-Agent": USER_AGENT, "X-BRAND": BRAND, "X-DAZNID": userdata.get("dazn_id", "")},
             properties=properties,
         ),
-        callback={"type": "interval_ts", "interval": interval, "callback": callback_url} if lock_interval else None,
+        callback={"type": "interval_ts", "interval": interval, "callback": callback_url},
         use_proxy=True,
     )
 
-    if resume_target is not None:
-        # SlyGuy forces no_resume on live items, which drops the resume point; clearing it (and force_resume, to
-        # skip Kodi's own resume prompt) lets a positive resume_from through as a real Kodi ResumeTime, seeking to
-        # resume_target seconds from the start of the stream. Unlike the live-edge seek-back, this is an absolute
-        # position, so it lands exactly regardless of how long playback took to start.
+    if resume_target:
+        # SlyGuy forces no_resume on live items (and Kayo items skip Kodi's resume), which drops the resume point;
+        # clearing it (and force_resume, to skip Kodi's own resume prompt) lets a positive resume_from through as a
+        # real Kodi ResumeTime, seeking to resume_target seconds from the start of the stream. Unlike the live-edge
+        # seek-back, this is an absolute position, so it lands exactly regardless of how long playback took to start.
         item.no_resume = False
         item.force_resume = True
         item.resume_from = resume_target
@@ -439,25 +602,45 @@ def play(asset_id, start=None, **kwargs):
 
 
 @plugin.route()
-def lock_callback(**kwargs):
+def playback_callback(asset_id=None, video_type=None, start_from=0, duration=0, **kwargs):
     # Called on an interval during playback and once more when playback stops
     player = xbmc.Player()
-    resume_asset = kwargs.get("resume_asset")
-    if player.isPlaying():
+    playing = player.isPlaying()
+    if playing:
         api.refresh_lock()
-        # Keep a recent position as a fallback, in case playback ends without firing the stop callback below
-        if resume_asset:
-            try:
-                pos, total = int(player.getTime()), int(player.getTotalTime())
-                # getTime can briefly misread while seeking, so ignore values outside the DVR window
-                if 0 <= pos <= total + 30:
-                    userdata.set("resume", {"asset": resume_asset, "pos": pos})
-            except Exception:
-                pass
     else:
         api.release_lock()
-        # The stop callback forwards the exact getTime at the stop point, so record that as the resume position
-        if resume_asset:
-            stop_pos = int(kwargs.get("_time") or 0)
-            if stop_pos > 0:
-                userdata.set("resume", {"asset": resume_asset, "pos": stop_pos})
+
+    if not asset_id:
+        return
+
+    if playing:
+        try:
+            position, total = int(player.getTime()), int(player.getTotalTime())
+        except Exception:
+            return
+        # getTime can briefly misread while seeking, so ignore values outside the stream
+        if not 0 <= position <= total + 30:
+            return
+    else:
+        # The stop callback forwards the exact getTime at the stop point
+        position, total = int(kwargs.get("_time") or 0), 0
+
+    if position <= 0:
+        return
+
+    if video_type == "LIVE":
+        # Kayo's apps store a live event's position as the epoch it was stopped at
+        position += int(start_from or 0)
+        length = position + 5
+    else:
+        length = max(total, int(duration or 0), position)
+
+    api.resume_point(
+        asset_id,
+        position,
+        length,
+        video_type,
+        event_id=kwargs.get("event_id"),
+        asset_type_id=kwargs.get("asset_type_id"),
+    )
