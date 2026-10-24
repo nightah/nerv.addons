@@ -17,6 +17,7 @@
 - **Live events, replays, minis, and shows**
 - **Search** across the Kayo catalogue
 - **Live TV and guide** in Kodi's TV section through IPTV Merge
+- **Resume anywhere:** replays and live events resume where you stopped, using Kayo's own resume points, so they stay in step with the Kayo apps
 
 Kayo now runs on DAZN's platform, so the addon talks to DAZN's APIs (`*.indazn.com`) using the Kayo brand. It is built on SlyGuy's common module (`script.module.slyguy`), which handles Widevine CDM installation, InputStream Adaptive setup, the local stream proxy, settings, and bookmarks.
 
@@ -29,7 +30,11 @@ Kayo now runs on DAZN's platform, so the addon talks to DAZN's APIs (`*.indazn.c
 
 Install the [NERV Repository](../README.md#install), then **Add-ons → Install from repository → NERV Repository → Video add-ons → Kayo Sports**. Kodi then keeps the addon updated.
 
-Open the addon, choose **Login**, and enter your Kayo email and password. Only the session token is stored; the password is not saved.
+Open the addon and choose **Login**. A QR code appears: scan it with a phone (or open the link shown on a computer) that is signed in to Kayo, and approve the device. The QR code is drawn by the addon, so the sign-in link isn't sent to any other service.
+
+To sign in with your email and password instead, set **Settings → Login method** to **Email and password**. Either way only the session token is stored; the password is not saved.
+
+If your account has more than one profile, you choose one after signing in, and can switch any time with **Select Profile** on the addon's main menu.
 
 <details>
 <summary>Installing from a zip instead</summary>
@@ -67,9 +72,9 @@ python3 -m pip install requests
 python3 plugin.video.kayo/tests/smoke.py --login
 ```
 
-Without `--login` it only checks the public catalogue. With `--login` it prompts for your credentials, then checks:
+Without `--login` it only checks the service config and public catalogue. With `--login` it prompts for your credentials (or with `--qr` prints a sign-in link to approve), then checks:
 
-- token refresh and Playback
+- token refresh, profiles, and Playback (including its resume point)
 - the manifest, and segment access with and without the CDN token
 - licence endpoint reachability
 - lock refresh and release

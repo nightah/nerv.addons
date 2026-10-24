@@ -2,6 +2,7 @@
 
     python plugin.video.kayo/tests/smoke.py            # public catalogue checks only
     python plugin.video.kayo/tests/smoke.py --login    # also sign in (prompts) and test playback for a live channel
+    python plugin.video.kayo/tests/smoke.py --qr       # sign in with a QR code instead: approve the printed URL
     python plugin.video.kayo/tests/smoke.py --quality  # compare resolutions offered to different client profiles
 
 Credentials are only sent to Kayo. The session token is kept in plugin.video.kayo/tests/.userdata.json (mode 600)
@@ -12,14 +13,16 @@ import getpass
 import os
 import re
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "shim"))
 sys.path.insert(0, os.path.join(ROOT, ".."))
 
 import requests
-from resources.lib.api import API, uncap_manifest
-from resources.lib.constants import USER_AGENT
+from resources.lib.api import API, jwt_data, uncap_manifest
+from resources.lib.constants import QR_POLL_INTERVAL, QR_TIMEOUT, RAIL_SERVICE, RAILS_SERVICE, USER_AGENT
+from slyguy import userdata
 
 DEFAULT_ASSET = "1tc0mhfzkbbti165v1rsuewtek"  # Fox League
 
@@ -31,6 +34,13 @@ def check(name, ok, detail=""):
 
 
 def public(api):
+    config = api.config(force=True)
+    check(
+        "config",
+        all(config["services"].get(name, {}).get(version) for name, version in (RAILS_SERVICE, RAIL_SERVICE)),
+        "(geo-allowed: {})".format(config["region"].get("isAllowed")),
+    )
+
     rails = api.rails("Home", "PageType:Home;ContentType:None")
     check("home rails", len(rails) > 3, f"({len(rails)} rails)")
 
@@ -39,6 +49,22 @@ def public(api):
 
     results = api.search("afl")
     check("search", sum(len(x["Tiles"]) for x in results) > 0)
+
+
+def qr_login(api):
+    data = api.device_code()
+    print(f"Approve this device at {data['url']} (waiting up to {QR_TIMEOUT // 60} minutes)")
+    for _ in range(QR_TIMEOUT // QR_POLL_INTERVAL):
+        time.sleep(QR_POLL_INTERVAL)
+        if api.device_login(data["id"]):
+            return
+    check("qr login", False, "timed out")
+
+
+def profiles(api):
+    rows = api.profiles()
+    current = api.profile().get("id") or jwt_data(userdata.get("access_token")).get("profileId")
+    check("profiles", any(x["profileId"] == current for x in rows), f"({len(rows)} profiles)")
 
 
 def playback(api, asset_id):
@@ -51,6 +77,7 @@ def playback(api, asset_id):
             data["Asset"]["Title"], details.get("Resolution"), ", ".join(x["CdnName"] for x in data["PlaybackDetails"])
         ),
     )
+    check("resume points", "ResumeFrom" in (data.get("ResumePoints") or {}), str(data.get("ResumePoints")))
 
     # Kayo returns several CDNs in varying order and the addon uses whichever is first, so check them all.
     # Segments are requested the way InputStream Adaptive does it: the addon's stream_params string appended as-is.
@@ -169,17 +196,21 @@ def main():
         password = getpass.getpass("Kayo password: ")
         api.login(email, password)
         check("login", api.logged_in)
+    elif "--qr" in sys.argv:
+        qr_login(api)
+        check("qr login", api.logged_in)
 
     if api.logged_in:
         api._refresh_token(force=True)
         check("token refresh", api.logged_in)
+        profiles(api)
         args = [x for x in sys.argv[1:] if not x.startswith("--")]
         if "--quality" in sys.argv:
             quality(api, args[0] if args else DEFAULT_ASSET)
         else:
             playback(api, args[0] if args else DEFAULT_ASSET)
     else:
-        print("Not signed in; run with --login to test playback.")
+        print("Not signed in; run with --login or --qr to test playback.")
 
 
 if __name__ == "__main__":

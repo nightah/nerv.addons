@@ -19,7 +19,7 @@ trim_trailing_whitespace = false
 indent_size = unset
 
 # Vendored QR library; its docstrings keep upstream's continuation-line alignment.
-[plugin.video.tennistv/resources/lib/qrcodegen.py]
+[plugin.video.{kayo,tennistv}/resources/lib/qrcodegen.py]
 indent_size = unset
 
 # Embeds a JavaScript harvester and shell snippets with their own indentation.
