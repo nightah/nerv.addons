@@ -22,13 +22,14 @@ from slyguy.constants import (
     ROUTE_TAG,
 )
 from slyguy.log import log
-from slyguy.util import async_tasks
+from slyguy.util import async_tasks, get_system_arch
 
 from .api import API, uncap_manifest
 from .constants import (
     BRAND,
     CHANNEL_NUMBERS,
     IMAGE_URL,
+    LICENSE_USER_AGENTS,
     LINEAR_IMAGES,
     LOGIN_EMAIL,
     QR_POLL_INTERVAL,
@@ -528,14 +529,18 @@ def play(asset_id, start=None, duration=None, **kwargs):
             if can_resume and index == 2:
                 resume_target = max(resume_pos - RESUME_BUFFER, 0)
 
-    elif not is_live and resume_pos and not kwargs.get(ROUTE_RESUME_TAG):
-        # Skip a resume point at the very end, which is a replay watched to the finish. ROUTE_RESUME_TAG means Kodi
-        # already resumed from its own bookmark (an item added before Kayo's resume points were used).
-        if not duration or resume_pos < duration - RESUME_MIN:
-            resume_target = plugin.resume_from(resume_pos)
-            if resume_target == -1:
-                api.release_lock()
-                return
+    # Skip a resume point at the very end, which is a replay watched to the finish. ROUTE_RESUME_TAG means Kodi
+    # already resumed from its own bookmark (an item added before Kayo's resume points were used).
+    elif (
+        not is_live
+        and resume_pos
+        and not kwargs.get(ROUTE_RESUME_TAG)
+        and (not duration or resume_pos < duration - RESUME_MIN)
+    ):
+        resume_target = plugin.resume_from(resume_pos)
+        if resume_target == -1:
+            api.release_lock()
+            return
 
     # The CDN token has to be on the manifest and on every segment request
     token = details.get("CdnToken") or {}
@@ -579,7 +584,11 @@ def play(asset_id, start=None, duration=None, **kwargs):
         headers={"User-Agent": USER_AGENT},
         inputstream=inputstream.Widevine(
             license_key=details["LaUrl"],
-            license_headers={"User-Agent": USER_AGENT, "X-BRAND": BRAND, "X-DAZNID": userdata.get("dazn_id", "")},
+            license_headers={
+                "User-Agent": LICENSE_USER_AGENTS.get(get_system_arch()[0], USER_AGENT),
+                "X-BRAND": BRAND,
+                "X-DAZNID": userdata.get("dazn_id", ""),
+            },
             properties=properties,
         ),
         callback={"type": "interval_ts", "interval": interval, "callback": callback_url},
