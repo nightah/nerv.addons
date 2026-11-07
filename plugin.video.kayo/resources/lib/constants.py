@@ -8,6 +8,14 @@ USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 12; SHIELD Android TV Build/SR1A.2
 
 HEADERS = {"User-Agent": USER_AGENT, "X-BRAND": BRAND}
 
+# The licence server now refuses a desktop Linux (L3) CDM's challenge with "Device not allowed to receive a license"
+# (10802) when the request carries the Android TV user-agent, but grants it to the desktop browser user-agent that
+# goes with that CDM. A user-agent for a different OS than the CDM is blocked by CloudFront (403), so it is keyed by
+# the system Kodi runs on; systems not listed keep USER_AGENT.
+LICENSE_USER_AGENTS = {
+    "Linux": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+}
+
 SIGN_IN_URL = "https://authentication-prod.ar.indazn.com/v5/SignIn"
 SWITCH_PROFILE_URL = "https://authentication-prod.ar.indazn.com/v1/SwitchProfile"
 USER_PROFILE_URL = "https://user-profile.ar.indazn.com/v4/UserProfile"
