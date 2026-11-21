@@ -8,13 +8,57 @@ USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 12; SHIELD Android TV Build/SR1A.2
 
 HEADERS = {"User-Agent": USER_AGENT, "X-BRAND": BRAND}
 
-# The licence server now refuses a desktop Linux (L3) CDM's challenge with "Device not allowed to receive a license"
-# (10802) when the request carries the Android TV user-agent, but grants it to the desktop browser user-agent that
-# goes with that CDM. A user-agent for a different OS than the CDM is blocked by CloudFront (403), so it is keyed by
-# the system Kodi runs on; systems not listed keep USER_AGENT.
-LICENSE_USER_AGENTS = {
-    "Linux": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+# The licence server now refuses a desktop (L3) CDM's challenge with "Device not allowed to receive a license"
+# (10802) when the request carries the Android TV user-agent, but grants it to the desktop Chrome user-agent that
+# goes with that CDM. It judges the user-agent's OS family against the CDM's platform_name, and a user-agent for a
+# different OS than the CDM is blocked by CloudFront (403), so the family follows the installed CDM. Systems not
+# listed (Android) keep USER_AGENT.
+_LICENSE_USER_AGENT = "Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+_LICENSE_CLIENT_HINTS = {
+    "sec-ch-ua": '"Not:A-Brand";v="8", "Chromium";v="156", "Google Chrome";v="156"',
+    "sec-ch-ua-mobile": "?0",
 }
+
+# User-agent platform token and sec-ch-ua-platform per OS family (None: no client hints, as a bare macOS Chrome
+# user-agent already passes CloudFront).
+LICENSE_UA_FAMILIES = {
+    "Linux": ("X11; Linux {arch}", '"Linux"'),
+    "ChromeOS": ("X11; CrOS {arch} 14541.0.0", '"Chrome OS"'),
+    "Windows": ("Windows NT 10.0; Win64; x64", '"Windows"'),
+    "Darwin": ("Macintosh; Intel Mac OS X 10_15_7", None),
+}
+
+# CDMs that are not from their host OS: the armv7 Widevine CDM is taken from a Chromebook and reports platform_name
+# ChromeOS, so a 32-bit ARM Linux host has to present as Chrome OS.
+LICENSE_UA_CDM_FAMILIES = {
+    ("Linux", "armv7"): "ChromeOS",
+}
+
+# get_system_arch() normalises its arch (32-bit ARM userland becomes armv7, i686 becomes i386).
+LICENSE_UA_ARCHS = {
+    "x86_64": "x86_64",
+    "i386": "i686",
+    "arm64": "aarch64",
+    "armv7": "armv7l",
+    "armv6": "armv7l",
+}
+
+
+def license_headers(system, arch):
+    family = LICENSE_UA_CDM_FAMILIES.get((system, arch), system)
+    if family not in LICENSE_UA_FAMILIES:
+        return {"User-Agent": USER_AGENT}
+
+    platform, hint_platform = LICENSE_UA_FAMILIES[family]
+    headers = {
+        "User-Agent": _LICENSE_USER_AGENT.format(platform=platform.format(arch=LICENSE_UA_ARCHS.get(arch, "x86_64")))
+    }
+    if hint_platform:
+        headers.update(_LICENSE_CLIENT_HINTS)
+        headers["sec-ch-ua-platform"] = hint_platform
+
+    return headers
+
 
 SIGN_IN_URL = "https://authentication-prod.ar.indazn.com/v5/SignIn"
 SWITCH_PROFILE_URL = "https://authentication-prod.ar.indazn.com/v1/SwitchProfile"
