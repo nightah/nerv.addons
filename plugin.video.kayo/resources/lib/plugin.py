@@ -29,7 +29,6 @@ from .constants import (
     BRAND,
     CHANNEL_NUMBERS,
     IMAGE_URL,
-    LICENSE_USER_AGENTS,
     LINEAR_IMAGES,
     LOGIN_EMAIL,
     QR_POLL_INTERVAL,
@@ -38,6 +37,7 @@ from .constants import (
     TIMESHIFT_DEFAULT,
     TIMESHIFT_MARGIN,
     USER_AGENT,
+    license_headers,
 )
 from .language import _
 from .settings import settings
@@ -585,7 +585,7 @@ def play(asset_id, start=None, duration=None, **kwargs):
         inputstream=inputstream.Widevine(
             license_key=details["LaUrl"],
             license_headers={
-                "User-Agent": LICENSE_USER_AGENTS.get(get_system_arch()[0], USER_AGENT),
+                **license_headers(*get_system_arch()),
                 "X-BRAND": BRAND,
                 "X-DAZNID": userdata.get("dazn_id", ""),
             },
